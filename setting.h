@@ -1,12 +1,11 @@
 #pragma once
-#include "typedef.h"
 #include <glm/glm.hpp>
 
 namespace setting {	
 	class Setting {
 	public:
 		struct Font {
-			LPCWSTR name;
+			const wchar_t* name;
 			unsigned height;
 		};
 		const Font font;
