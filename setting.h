@@ -5,7 +5,7 @@ namespace setting {
 	class Setting {
 	public:
 		struct Font {
-			const wchar_t* name;
+			wchar_t* name;
 			unsigned height;
 		};
 		const Font font;

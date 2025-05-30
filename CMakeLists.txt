@@ -10,4 +10,5 @@ set(HPP resource.h util.h stb_image.h bitmap.h setting.h font.h frame.h graphics
 set(CPP impliment.cpp util.cpp setting.cpp font.cpp frame.cpp graphics.cpp object.cpp)
 
 add_executable(game WIN32 main.cpp ${HPP} ${CPP})
-target_include_directories(game PUBLIC c://glm)
+include_directories(c://glad/src)
+target_include_directories(game PUBLIC c://glm c://glad/include)
