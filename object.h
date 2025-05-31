@@ -15,7 +15,7 @@ namespace object {
 	{
 	public:
 		const graphics::uniforms::Rectangle border;
-		Button(const wchar_t* label, const glm::ivec2 center, const glm::ivec2 size);
+		Button(const wchar_t* label, const glm::vec2 center, const glm::vec2 size);
 	};
 	class Menu :
 		graphics::Window,
@@ -25,9 +25,9 @@ namespace object {
 		const graphics::uniforms::Rectangle border;
 	private:
 		struct Data {
-			const glm::ivec2 center;
-			const glm::ivec2 size;
-			const glm::ivec4 rectangle;
+			const glm::vec2 center;
+			const glm::vec2 size;
+			const glm::vec4 rectangle;
 			const std::vector<std::wstring> labels;
 		};
 	public:
@@ -39,7 +39,7 @@ namespace object {
 		static std::vector<std::wstring> Labels(labels... label) {
 			return std::vector<std::wstring>{ std::wstring{ label }... };
 		}
-		static Data Adapter(const glm::ivec2 center, const std::vector<std::wstring> labels);
+		static Data Init(const glm::vec2 center, const std::vector<std::wstring> labels);
 	};
 	extern object::Menu mn;
 }

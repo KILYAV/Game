@@ -25,7 +25,7 @@ Gls::Glyphes(const FT_Face face, const unsigned new_height) :
 	under{ face->bbox.yMax * new_height * frm.size.dpi.y / face->units_per_EM / default_dpi }
 {}
 int Gls::Leingth(const FT_Face face, const std::wstring& text) {
-	int length = 0;
+	int length = height;
 	for (auto ch : text) {
 		auto index{ FT_Get_Char_Index(face, ch) };
 		auto iter{ this->find(index) };

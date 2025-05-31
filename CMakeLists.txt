@@ -11,4 +11,5 @@ set(CPP impliment.cpp util.cpp setting.cpp font.cpp frame.cpp graphics.cpp objec
 
 add_executable(game WIN32 main.cpp ${HPP} ${CPP})
 include_directories(c://glad/src)
-target_include_directories(game PUBLIC c://glm c://glad/include)
+target_include_directories(game PUBLIC c://glm c://glad/include c://glfw-3.4/include)
+target_include_directories(game PUBLIC c://freetype-2.13.3/include C:/freetype-2.13.3/include/freetype)

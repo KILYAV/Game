@@ -5,6 +5,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "util.h"
 #include "resource.h"
 #include "bitmap.h"
 
@@ -23,7 +24,9 @@ namespace graphics {
 		protected:
 			Array();
 			template<class Tuple>
-			Array(const std::vector<Tuple>& vector) {
+			Array(const std::vector<Tuple>& vector) :
+				Array{}
+			{
 				size = static_cast<unsigned>(vector.size());
 				LoadVertices(vector);
 			}
@@ -52,9 +55,8 @@ namespace graphics {
 				return offset;
 			}
 			void VertexAttribPointer(unsigned attr, unsigned count, unsigned type, unsigned size, unsigned offset) const;
-		public:
-			static std::vector<std::tuple<glm::vec2, glm::vec2>> GetRectangle(const glm::ivec4& rectangl);
 		};
+		std::vector<std::tuple<glm::vec2, glm::vec2>> Rectangle(const glm::vec4 rectangl);
 		class Element {
 		public:
 			const unsigned EBO;
@@ -72,7 +74,7 @@ namespace graphics {
 	}
 	class Texture {
 	public:
-		const unsigned texture; 
+		const unsigned texture = 0;
 	protected:
 		Texture();
 		template<class Pixel>
@@ -149,10 +151,12 @@ namespace graphics {
 			using type = glm::vec4;
 			glm::vec4 value;
 
-			Rectangle(const glm::vec4 rectangle) :
+			Rectangle(const glm::vec4 rectangle = {}) :
 				value{ rectangle }
 			{}
-			Rectangle(const glm::ivec2 center, const glm::ivec2 size);
+			Rectangle(const glm::ivec2 center, const glm::ivec2 size) :
+				value{ glm::Rectangle(center, size) }
+			{}
 
 			bool operator== (const glm::ivec2) const;
 			Rectangle operator- (const int border) const;

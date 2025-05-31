@@ -6,5 +6,5 @@
 
 int main()
 {
-	mn.Run();
+	object::mn.Run();
 }

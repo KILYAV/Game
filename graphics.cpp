@@ -26,11 +26,11 @@ void vertex::Array::VertexAttribPointer(
 	glVertexAttribPointer(attr, count, type, GL_FALSE, size, (void*)offset);
 	glEnableVertexAttribArray(attr);
 };
-std::vector<std::tuple<glm::vec2, glm::vec2>> vertex::Array::GetRectangle(const glm::ivec4& rectangl) {
-	float x{ (rectangl.x << 1) / frm.size.floating.x - 1 };
-	float y{ (rectangl.y << 1) / frm.size.floating.y - 1 };
-	float z{ (rectangl.z << 1) / frm.size.floating.x - 1 };
-	float w{ (rectangl.w << 1) / frm.size.floating.y - 1 };
+std::vector<std::tuple<glm::vec2, glm::vec2>> vertex::Rectangle(const glm::vec4 rectangle) {
+	float x{ (rectangle.x * 2) / frm.size.floating.x - 1 };
+	float y{ (rectangle.y * 2) / frm.size.floating.y - 1 };
+	float z{ (rectangle.z * 2) / frm.size.floating.x - 1 };
+	float w{ (rectangle.w * 2) / frm.size.floating.y - 1 };
 	return std::vector<std::tuple<glm::vec2, glm::vec2>>{
 		{ { x, y }, { 0., 1. } },
 		{ { z, y }, { 1., 1. } },
@@ -151,12 +151,6 @@ std::map<const char*, unsigned> uniforms::GetUniforms(
 		uniforms.emplace(ptr, glGetUniformLocation(shader, ptr));
 	}
 	return uniforms;
-}
-uniforms::Rectangle::Rectangle(const glm::ivec2 center, const glm::ivec2 size) {
-	value.x = center.x - (size.x >> 1);
-	value.y = center.y - (size.y >> 1);
-	value.z = value.x + size.x;
-	value.w = value.y + size.y;
 }
 bool uniforms::Rectangle::operator== (const glm::ivec2 pos) const {
 	return  value.x < pos.x && pos.x < value.z && value.y < pos.y && pos.y < value.w;
