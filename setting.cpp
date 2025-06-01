@@ -25,7 +25,7 @@ void Init(St* setting) {
 }
 constexpr unsigned default_font_height = 12;
 St::Setting() :
-	font{ MAKEINTRESOURCE(IDR_FONT_ARIAL), default_font_height }
+	font{ reinterpret_cast<LPSTR>(MAKEINTRESOURCE(IDR_FONT_ARIAL)), default_font_height }
 {}
 St::~Setting() {
 	std::fstream file{ path };

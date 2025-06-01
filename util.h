@@ -6,7 +6,7 @@
 namespace util {
 	template<typename Pixel>
 	bitmap::BitMap<Pixel> LoadTexture(const int ID) {
-		auto resource = FindResource(NULL, MAKEINTRESOURCE(ID), L"JPG");
+		auto resource = FindResource(NULL, MAKEINTRESOURCE(ID), reinterpret_cast<LPCSTR>(L"JPG"));
 		auto source{ LockResource(LoadResource(NULL, resource)) };
 		auto size{ SizeofResource(NULL, resource) };
 		int width, height, channels;

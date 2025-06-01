@@ -2,7 +2,6 @@
 #include <map>
 #include <vector>
 #include <string>
-#include "typedef.h"
 #include "bitmap.h"
 #include "freetype/ftglyph.h"
 

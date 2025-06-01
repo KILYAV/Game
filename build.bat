@@ -1,4 +1,3 @@
-cd build
-cmake ..
+cmake .
 cmake --build .
 pause
