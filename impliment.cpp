@@ -15,5 +15,5 @@ const graphics::Shader graphics::Window::shader{ graphics::Shader::LoadShader(
 const std::map<const char*, unsigned> graphics::uniforms::Window::uniforms{
 	graphics::uniforms::Window::GetUniforms(graphics::Window::shader.shader) };
 
-object::Menu mn{ object::Menu::Adapter({ frm.size.integer.x >> 1, frm.size.integer.y >> 1 },
+object::Menu mn{ object::Menu::Init({ frm.size.integer.x >> 1, frm.size.integer.y >> 1 },
 	object::Menu::Labels(object::button::Exit::label)) };

@@ -10,7 +10,13 @@ set(HPP resource.h util.h stb_image.h bitmap.h setting.h font.h frame.h graphics
 set(CPP impliment.cpp util.cpp setting.cpp font.cpp frame.cpp graphics.cpp object.cpp)
 
 add_executable(game WIN32 main.cpp ${HPP} ${CPP})
+<<<<<<< HEAD
 
 include_directories(c://glm c://glad/src c://glad/include c://glfw-3.4/include c://freetype-2.13.3/include)
 #target_include_directories(game PUBLIC c://glm c://glad/include c://glfw-3.4/include)
 #target_include_directories(game PUBLIC c://freetype-master/freetype-master/include)
+=======
+include_directories(c://glad/src)
+target_include_directories(game PUBLIC c://glm c://glad/include c://glfw-3.4/include)
+target_include_directories(game PUBLIC c://freetype-2.13.3/include C:/freetype-2.13.3/include/freetype)
+>>>>>>> 361a03e9aef66beb2a7211cc0285517a055a8d61

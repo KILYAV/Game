@@ -1,5 +1,6 @@
 #pragma once
 #include <Windows.h>
+#include <glm/glm.hpp>
 #include "bitmap.h"
 #include "stb_image.h"
 
@@ -14,5 +15,7 @@ namespace util {
 		unsigned char* data = stbi_load_from_memory(static_cast<const unsigned char*>(source), size, &width, &height, &channels, 0);
 		return bitmap::BitMap<Pixel>{ static_cast<Pixel*>(static_cast<void*>(data)), { width,height } };
 	}
-	//bitmap::BitMap LoadTexture(const std::string& path);
+}
+namespace glm {
+	vec4 Rectangle(const vec2 center, const vec2 size);
 }

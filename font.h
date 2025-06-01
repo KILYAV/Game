@@ -2,8 +2,12 @@
 #include <map>
 #include <vector>
 #include <string>
+<<<<<<< HEAD
 #include "bitmap.h"
+=======
+>>>>>>> 361a03e9aef66beb2a7211cc0285517a055a8d61
 #include "freetype/ftglyph.h"
+#include "bitmap.h"
 
 class Font;
 namespace font {
