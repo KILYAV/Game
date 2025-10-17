@@ -49,7 +49,7 @@ namespace font {
 				return library;
 				}) },
 			face{ std::invoke([&]() {
-				auto resource = FindResource(NULL, MAKEINTRESOURCE(IDR_FONTS1)/*stt.font.name*/, L"FONTS");
+				auto resource = FindResource(NULL, MAKEINTRESOURCE(stt.font.name), RT_FONT);
 				auto data{ LockResource(LoadResource(NULL, resource)) };
 				auto size{ SizeofResource(NULL, resource) };
 				FT_Face face;

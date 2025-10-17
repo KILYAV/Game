@@ -1,7 +1,7 @@
 #pragma once
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include "glm/glm.hpp"
+#include "../glm/glm/glm.hpp"
+#include "../glad/include/glad/glad.h"
+#include "../glfw/include/GLFW/glfw3.h"
 //#include "graphics.h"
 
 namespace frame {

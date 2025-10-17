@@ -2,8 +2,8 @@
 #include <map>
 #include <vector>
 #include <string>
-#include "freetype/ftglyph.h"
 #include "bitmap.h"
+#include "../freetype/include/freetype/ftglyph.h"
 
 namespace font {
 	struct Glyph :
@@ -24,7 +24,7 @@ namespace font {
 		Glyphs(const Glyphs&) = default;
 		Glyphs(const FT_Face face, const unsigned height);
 		glm::ivec2 Size(const FT_Face face, const std::wstring& text);
-		std::map<unsigned, Glyph>::at;
+		using std::map<unsigned, Glyph>::at;
 		const unsigned height;
 		const unsigned under;
 	};

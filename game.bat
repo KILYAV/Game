@@ -1,0 +1,1 @@
+g++ -std=c++20 glad.c setting.cpp frame.cpp font.cpp game.cpp -I../freetype/include -I../glad/include -L../freetype/objs -lfreetype -L../glfw/lib-mingw-w64 -lglfw3 -L../glfw/lib-mingw-w64 -lglfw3dll -o game

@@ -1,26 +1,25 @@
 #pragma once
 #include <memory>
-#include <glm/glm.hpp>
-#include <glad/glad.h>
 #include <iostream>
+#include "../glm/glm/glm.hpp"
 
 namespace bitmap {
 	struct Red {
 		unsigned char r;
-		static inline constexpr unsigned GL_XXX = GL_RED;
+		inline static constexpr unsigned GL_XXX = GL_RED;
 	};
 	struct RGB :
 		Red
 	{
 		unsigned char g;
 		unsigned char b;
-		static inline constexpr unsigned GL_XXX = GL_RGB;
+		inline static constexpr unsigned GL_XXX = GL_RGB;
 	};
 	struct RGBA :
 		RGB
 	{
 		unsigned char a;
-		static inline constexpr unsigned GL_XXX = GL_RGBA;
+		inline static constexpr unsigned GL_XXX = GL_RGBA;
 	};
 	template<typename Pixel>
 	class BitMap :
@@ -29,7 +28,7 @@ namespace bitmap {
 	private:
 		glm::ivec2 size;
 	public:
-		std::unique_ptr<Pixel[]>::operator bool;
+		using std::unique_ptr<Pixel[]>::operator bool;
 		BitMap() = default;
 		BitMap(BitMap&& bitmap);
 		BitMap(const BitMap& bitmap);
@@ -50,7 +49,7 @@ namespace bitmap {
 		Pixel GetPixel(const glm::ivec2 pos) const;
 
 		const unsigned GL_XXX() const {
-			return Pixel.GL_XXX;
+			return Pixel::GL_XXX;
 		}
 		const unsigned char* Data() const;
 		const glm::ivec2 GetSize() const {
@@ -171,6 +170,8 @@ namespace bitmap {
 	Pixel BitMap<Pixel>::GetPixel(const glm::ivec2 pos) const {
 		if (0 <= pos.x || pos.x < size.x || 0 <= pos.y || pos.y < size.y)
 			return this->get()[pos.x + pos.y * size.x];
+		else
+			return Pixel{};
 	}
 	template<typename Pixel>
 	const unsigned char* BitMap<Pixel>::Data() const {

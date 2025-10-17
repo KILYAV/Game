@@ -1,7 +1,8 @@
-#include <Windows.h>
 #include <fstream>
 #include <filesystem>
 #include <Shlobj.h>
+#include <knownfolders.h>
+#include "resource.h"
 #include "setting.h"
 
 using St = setting::Setting;
@@ -22,7 +23,8 @@ void Init(St* setting) {
 		file.close();
 	}
 }
-constexpr wchar_t default_font_name[] = L"Arial";
+constexpr unsigned Arial = IDR_FONT1;
+constexpr unsigned default_font_name = Arial;
 constexpr unsigned default_font_height = 12;
 St::Setting() :
 	font{ default_font_name, default_font_height }
