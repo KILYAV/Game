@@ -2,6 +2,7 @@
 #include "setting.h"
 #include "frame.h"
 #include "font.h"
+#include "graphic.h"
 //#include "object.h"
 
 setting::Setting setting::Setting::stt;
@@ -10,5 +11,6 @@ font::Font font::Font::fnt;
 
 int main()
 {
-	//object::mn.Run();
+	std::cout
+		<< graphic::shape::Backdrop{ glm::vec2{} }.Type() << "\n";
 }

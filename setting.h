@@ -4,7 +4,7 @@ namespace setting {
 	class Setting {
 	public:
 		struct Font {
-			unsigned name;
+			unsigned ID;
 			unsigned height;
 		};
 		const Font font;
