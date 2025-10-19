@@ -11,6 +11,8 @@ font::Font font::Font::fnt;
 
 int main()
 {
-	std::cout
-		<< graphic::shape::Backdrop{ glm::vec2{} }.Type() << "\n";
+	graphic::object::button::Exit{ { frm.size.integer.x / 2, frm.size.integer.y / 2 } }.Draw();
+	glfwSwapBuffers(frm.window);
+	char ch;
+	std::cin >> ch;
 }

@@ -12,10 +12,10 @@ Fr::Frame() :
 		}) },
 	size{ std::invoke([&]() {
 		Size size;
-		glfwGetMonitorPhysicalSize(monitor, &size.physical.x, &size.physical.y);
+		size.physical.x = 169; size.physical.y = 127; //glfwGetMonitorPhysicalSize(monitor, &size.physical.x, &size.physical.y);
 		auto mode{ glfwGetVideoMode(monitor) };
-		size.integer.x = mode->width;
-		size.integer.y = mode->height;
+		size.integer.x = 640; // mode->width;
+		size.integer.y = 480; // mode->height;
 		size.floating = size.integer;
 		constexpr int mm_in_inch = 254;
 		size.dpi.x = size.integer.x * mm_in_inch / (size.physical.x * 10);

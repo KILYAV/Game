@@ -10,11 +10,10 @@
 #include "resource.h"
 
 namespace graphic {
-	namespace label {
-		static constexpr wchar_t backdrop[] = L"BACKDROP";
-		static constexpr std::wstring_view button{ L"BUTTON" };
-	}
 	namespace shader {
+		namespace label {
+			static constexpr wchar_t rectangle[] = L"RECTANGLE";
+		}
 		unsigned GetShader(const wchar_t* type, int vert, int frag, int geom = 0);
 		template<const wchar_t* type, int vert, int frag, int geom = 0>
 		class Shader {
@@ -25,36 +24,81 @@ namespace graphic {
 				glUseProgram(shader);
 			}
 		};
-		using Backdrop = Shader<label::backdrop, IDR_BACKDROP_SHADER_VERT, IDR_BACKDROP_SHADER_FRAC>;
+		using Rectangle = Shader<label::rectangle, IDR_RECTANGLE_SHADER_VERT, IDR_RECTANGLE_SHADER_FRAC>;
 	}
 	namespace texture {
-		struct Data {
-			unsigned ID;
-			int h;
-			int w;
-			static Data GetData(const int ID);
-		};
-		template<int ID>
-		class Texture {
-		public:
-			inline static const Data data{ Data::GetData(ID) };
-		protected:
-			static void BindTexture() {
-				glBindTexture(GL_TEXTURE_2D, texture);
-			}
-		};
-		using Backdrop = Texture<IDR_BACKDROP_JPG>;
+		namespace data {
+			struct Texture {
+				unsigned ID;
+				glm::ivec2 size;
+			};
+		}
+		namespace id {
+			data::Texture GetTexture(const int ID);
+			template<const int ID>
+			class Texture {
+			public:
+				inline static const data::Texture texture{ GetTexture(ID) };
+			protected:
+				static void BindTexture() {
+					glBindTexture(GL_TEXTURE_2D, texture.ID);
+				}
+			};
+		}
+		namespace backdrop {
+			using Main = id::Texture<IDR_BACKDROP_JPG>;
+		}
+		namespace str {
+			data::Texture GetTexture(const wchar_t* label);
+			template<const wchar_t* label>
+			class Texture {
+			public:
+				inline static const data::Texture texture{ GetTexture(label) };
+			protected:
+				static void BindTexture() {
+					glBindTexture(GL_TEXTURE_2D, texture.ID);
+				}
+			};
+		}
+		namespace label {
+			static constexpr wchar_t exit[] = L"EXIT";
+		}
+		namespace button {
+			using Exit = str::Texture<label::exit>;
+		}
+	}
+	namespace shape {
+		namespace rectangle {
+			constexpr size_t size = 4;
+			template<class... Texture>
+			class Rectangle;
+			template<>
+			class Rectangle<> {
+			public:
+				static constexpr size_t size = rectangle::size;
+				using input = const glm::ivec2;
+				using tuple = std::tuple<glm::vec2>;
+				using output = std::array<tuple, size>;
+
+				static output GetRectangle(input rectangle);
+			};
+			std::array<std::tuple<glm::vec2, glm::vec2>, size> GetRectangle(
+				const glm::ivec2 rectangle, const glm::vec2 texture);
+			template<class Texture>
+			class Rectangle<Texture> {
+			public:
+				static constexpr size_t size = rectangle::size;
+				using input = const glm::ivec2;
+				using tuple = std::tuple<glm::vec2, glm::vec2>;
+				using output = std::array<tuple, size>;
+
+				static output GetRectangle(input rectangle) {
+					return rectangle::GetRectangle(rectangle, Texture::texture.size);
+				}
+			};
+		}
 	}
 	namespace vertex {
-		class Rectangle {
-		public:
-			static constexpr size_t size = 4;
-			using input = const glm::vec2;
-			using tuple = std::tuple<glm::vec2, glm::vec2>;
-			using output = std::array<tuple, size>;
-		protected:
-			static output GetRectangle(input rectangle);
-		};
 		template<class Shape>
 		class Array :
 			public Shape
@@ -106,6 +150,12 @@ namespace graphic {
 			glBindVertexArray(0);
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 		}
+		namespace backdrop {
+			using Main = Array<shape::rectangle::Rectangle<texture::backdrop::Main>>;
+		}
+		namespace button {
+			using Exit = Array<shape::rectangle::Rectangle<texture::button::Exit>>;
+		}
 
 		class Element {
 		public:
@@ -118,32 +168,38 @@ namespace graphic {
 			}
 		};
 	}
-	namespace shape {
+	namespace object {
 		template<class Shader, class Texture, class Array>
-		class Shape :
+		class Object :
 			Shader,
 			Texture,
 			Array
 		{
 		public:
-			Shape(Array::input input) :
+			Object(Array::input input) :
 				Shader{},
 				Texture{},
 				Array{ input }
 			{}
 		//protected:
 			static unsigned Type() { return 0; };
-			const void BindShape() const;
+			const void Draw() const;
 		private:
 			virtual void BindUniform() const {};
 		};
 		template<class Shader, class Texture, class Array>
-		const void Shape<Shader, Texture, Array>::BindShape() const {
+		const void Object<Shader, Texture, Array>::Draw() const {
 			Shader::BindShader();
 			Texture::BindTexture();
 			Array::BindArray();
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, Array::size);
 		};
-		using Backdrop = Shape<shader::Backdrop, texture::Backdrop, vertex::Array<vertex::Rectangle>>;
+		namespace backdrop {
+			using Main = Object<shader::Rectangle, texture::backdrop::Main, vertex::backdrop::Main>;
+		}
+		namespace button {
+			using Exit = Object<shader::Rectangle, texture::button::Exit, vertex::button::Exit>;
+		}
 	}
 	/*
 	namespace uniforms {
@@ -225,35 +281,5 @@ namespace graphic {
 	namespace uniforms {
 		using Window = Uniform<uniforms::Flash, uniforms::Rectangle>;
 	}
-	class Window :
-		public Interface,
-		public uniforms::Window
-	{
-	public:
-		static const Shader shader;
-
-		Window() = default;
-		template<class Tuple, class Pixel, class... Type>
-		Window(
-			const std::vector<Tuple> vertices,
-			//const std::vector<unsigned> indices,
-			const bitmap::BitMap<Pixel> bitmap,
-			const Type&... type
-		) :
-			Interface{ vertices, indices, bitmap },
-			uniforms::Window{ type... }
-		{}
-		const Interface& BindShader() const {
-			glUseProgram(shader.shader);
-			return *this;
-		}
-		const Interface& BindUniform() const {
-			uniforms::Window::BindUniform();
-			return *this;
-		}
-		unsigned Type() const {
-			return GL_TRIANGLE_STRIP;
-		}
-	};
 	*/
 }

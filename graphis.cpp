@@ -3,6 +3,7 @@
 #include "graphic.h"
 #include "setting.h"
 #include "frame.h"
+#include "font.h"
 #include "bitmap.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -53,7 +54,7 @@ namespace graphic {
 		}
 	}
 	namespace texture {
-		Data Data::GetData(const int ID)  {
+		unsigned LoadTexture(unsigned char* data, const glm::ivec2 size, const bool align = true) {
 			unsigned texture;
 			glGenTextures(1, &texture);
 			glBindTexture(GL_TEXTURE_2D, texture);
@@ -63,33 +64,64 @@ namespace graphic {
 			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-			auto resource = FindResource(NULL, MAKEINTRESOURCE(ID), L"JPG");
-			auto source{ LockResource(LoadResource(NULL, resource)) };
-			auto size{ SizeofResource(NULL, resource) };
-			int width, height, channels;
-			stbi_set_flip_vertically_on_load(true);
-			unsigned char* data
-				= stbi_load_from_memory(static_cast<const unsigned char*>(source), size, &width, &height, &channels, 0);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, sizeof(bitmap::RGB));
+			glPixelStorei(GL_UNPACK_ALIGNMENT, align ? sizeof(bitmap::RGB): sizeof(bitmap::Red));
 			glBindTexture(GL_TEXTURE_2D, texture);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			return { texture, height, width };
+			glTexImage2D(GL_TEXTURE_2D, 0, align ? GL_RGB : GL_RED, size.x, size.y, 0,
+				align ? GL_RGB : GL_RED, GL_UNSIGNED_BYTE, data);
+			return texture;
+		}
+		namespace id {
+			data::Texture GetTexture(const int ID) {
+				auto resource = FindResource(NULL, MAKEINTRESOURCE(ID), L"JPG");
+				auto source{ LockResource(LoadResource(NULL, resource)) };
+				auto size{ SizeofResource(NULL, resource) };
+				int width, height, channels;
+				stbi_set_flip_vertically_on_load(true);
+				unsigned char* data
+					= stbi_load_from_memory(static_cast<const unsigned char*>(source), size, &width, &height, &channels, 0);
+				return { LoadTexture(data, { width, height }), { width, height } };
+			}
+		}
+		namespace str {
+			data::Texture GetTexture(const wchar_t* label) {
+				auto bitmap{ fnt.GetBitMap(label) };
+				return { LoadTexture(bitmap.Data(), bitmap.GetSize(), false), bitmap.GetSize() };
+			}
+		}
+	}
+	namespace shape {
+		namespace rectangle {
+			Rectangle<>::output Rectangle<>::GetRectangle(input rectangle) {
+				float top{ rectangle.y / frm.size.floating.y };
+				float down{ -top };
+				float right{ rectangle.x / frm.size.floating.x };
+				float left{ -right };
+				return output{
+					tuple{ { top, left } },
+					tuple{ { top, right } },
+					tuple{ { down, left } },
+					tuple{ { down, right } }
+				};
+			};
+			std::array<std::tuple<glm::vec2, glm::vec2>, size> GetRectangle(
+				const glm::ivec2 rectangle, const glm::vec2 texture) {
+				auto point{ Rectangle<>::GetRectangle(rectangle) };
+				float width{ rectangle.x / texture.x / 2 };
+				float height{ rectangle.y / texture.y / 2 };
+				float top{ .5f + height };
+				float down{ .5f - height };
+				float left{ .5f - width };
+				float right{ .5f + width };
+				return std::array<std::tuple<glm::vec2, glm::vec2>, size>{
+					std::tuple<glm::vec2, glm::vec2>{ std::get<0>(point[0]), { top, left } },
+						std::tuple<glm::vec2, glm::vec2>{ std::get<0>(point[1]), { top, right } },
+						std::tuple<glm::vec2, glm::vec2>{ std::get<0>(point[2]), { down, left } },
+						std::tuple<glm::vec2, glm::vec2>{ std::get<0>(point[3]), { down, right } }
+				};
+			}
 		}
 	}
 	namespace vertex {
-		Rectangle::output Rectangle::GetRectangle(input rectangle) {
-			float right{ rectangle.x / frm.size.floating.x };
-			float top{ rectangle.y / frm.size.floating.y };
-			float down{ -top };
-			float left{ -right };
-			return output{
-				tuple{ { top, left   }, { 0., 1. } },
-				tuple{ { top, right  }, { 1., 1. } },
-				tuple{ { down, left  }, { 0., 0. } },
-				tuple{ { down, right }, { 1., 0. } }
-			};
-		};
 		Element::Element(const std::vector<unsigned>& indices) :
 			EBO{ std::invoke([]() {
 				unsigned EBO;

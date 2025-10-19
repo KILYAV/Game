@@ -32,7 +32,7 @@ namespace bitmap {
 		BitMap() = default;
 		BitMap(BitMap&& bitmap);
 		BitMap(const BitMap& bitmap);
-		BitMap(const Pixel* data, const glm::ivec2 size);
+		BitMap(const Pixel* data, const glm::ivec2 size, bool mirror = false);
 		void operator= (const BitMap& other);
 
 		BitMap& SetSize(const glm::ivec2 size);
@@ -51,22 +51,33 @@ namespace bitmap {
 		const unsigned GL_XXX() const {
 			return Pixel::GL_XXX;
 		}
-		const unsigned char* Data() const;
+		unsigned char* Data() {
+			return const_cast<unsigned char*>(static_cast<const BitMap*>(this)->Data());
+		}
+		const unsigned char* Data() const {
+			return static_cast<const unsigned char*>(static_cast<const void*>(this->get()));
+		}
 		const glm::ivec2 GetSize() const {
 			return size;
 		}
 	private:
-		std::unique_ptr<Pixel[]> Data(const Pixel* data, const glm::ivec2 size);
+		std::unique_ptr<Pixel[]> Data(const Pixel* data, const glm::ivec2 size, bool mirror);
 	};
 	template<typename Pixel>
-	std::unique_ptr<Pixel[]> BitMap<Pixel>::Data(const Pixel* data, const glm::ivec2 size) {
+	std::unique_ptr<Pixel[]> BitMap<Pixel>::Data(const Pixel* data, const glm::ivec2 size, bool mirror) {
 		int count = size.x * size.y;
 		if (count) {
 			Pixel* bitmap{ new Pixel[count]{0} };
 			if (data) {
-				for (unsigned index = 0; index < count; ++index) {
-					bitmap[index] = data[index];
+				if (mirror) {
+					for (unsigned x = 0, max_X = size.x * sizeof(Pixel); x < max_X; ++x)
+						for (unsigned y = 0, max_Y = count * sizeof(Pixel); y < max_Y; y += max_X)
+							bitmap[x + y] = data[x + (max_Y - max_X - y)];
 				}
+				else
+					for (unsigned index = 0; index < count; ++index) {
+						bitmap[index] = data[index];
+					}
 			}
 			return std::unique_ptr<Pixel[]>{ bitmap };
 		}
@@ -87,8 +98,8 @@ namespace bitmap {
 		BitMap{ bitmap.get(), bitmap.size }
 	{}
 	template<typename Pixel>
-	BitMap<Pixel>::BitMap(const Pixel* data, const glm::ivec2 size) :
-		std::unique_ptr<Pixel[]>{ Data(data,size) },
+	BitMap<Pixel>::BitMap(const Pixel* data, const glm::ivec2 size, bool mirror) :
+		std::unique_ptr<Pixel[]>{ Data(data,size,mirror) },
 		size{ size }
 	{}
 	template<typename Pixel>
@@ -172,9 +183,5 @@ namespace bitmap {
 			return this->get()[pos.x + pos.y * size.x];
 		else
 			return Pixel{};
-	}
-	template<typename Pixel>
-	const unsigned char* BitMap<Pixel>::Data() const {
-		return static_cast<const unsigned char*>(static_cast<const void*>(this->get()));
 	}
 }

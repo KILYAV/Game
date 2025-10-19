@@ -16,40 +16,29 @@ namespace font {
 		const glm::ivec2 pos;
 		const glm::ivec2 advance;
 	};
-	class Glyphs :
+	struct Face :
 		std::map<unsigned, Glyph>
 	{
 	public:
-		Glyphs(Glyphs&&) = default;
-		Glyphs(const Glyphs&) = default;
-		Glyphs(const FT_Face face, const unsigned height);
-		glm::ivec2 Size(const FT_Face face, const std::wstring& text);
-		using std::map<unsigned, Glyph>::at;
 		const unsigned height;
 		const unsigned under;
+		Face(const FT_Face face, const unsigned new_height);
 	};
-	namespace font {
-		struct Base {
-			FT_Library library;
-			FT_Face face;
-			Base();
-		};
-	}
 	class Font :
-		font::Base,
-		std::map<unsigned, Glyphs>
+		std::map<unsigned, Face>
 	{
 	private:
-		Glyphs* glyphes;
+		FT_Library library;
+		FT_Face face;
+		std::map<unsigned, Face>::iterator glyphs;
 	public:
 		Font(Font&&) = delete;
 		Font(const Font&) = delete;
 		~Font();
 
-		Font& SetHeight(unsigned height);
-		glm::ivec2 Leingth(const std::wstring& text);
-		glm::ivec2 MaxLeingth(const std::vector<std::wstring>& texts);
-		bitmap::BitMap<bitmap::Red> GetBitMap(const std::wstring& text) const;
+		unsigned Height(const unsigned height = 0);
+		glm::ivec2 Size(const std::wstring& text);
+		bitmap::BitMap<bitmap::Red> GetBitMap(const std::wstring& text);
 
 		static Font fnt;
 	private:

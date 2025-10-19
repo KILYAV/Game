@@ -4,8 +4,8 @@
 //
 #define IDR_FONT1                       101
 #define IDR_BACKDROP_JPG                102
-#define IDR_BACKDROP_SHADER_VERT        103
-#define IDR_BACKDROP_SHADER_FRAC        104
+#define IDR_RECTANGLE_SHADER_VERT        103
+#define IDR_RECTANGLE_SHADER_FRAC        104
 
 // Next default values for new objects
 // 
