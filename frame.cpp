@@ -1,6 +1,9 @@
 #include "frame.h"
 #include "setting.h"
 
+#define FULLSCREEN
+#undef FULLSCREEN
+
 using Fr = frame::Frame;
 Fr::Frame() :
 	monitor{ std::invoke([]() {
@@ -12,20 +15,30 @@ Fr::Frame() :
 		}) },
 	size{ std::invoke([&]() {
 		Size size;
-		size.physical.x = 169; size.physical.y = 127; //glfwGetMonitorPhysicalSize(monitor, &size.physical.x, &size.physical.y);
+#ifdef FULLSCREEN
 		auto mode{ glfwGetVideoMode(monitor) };
-		size.integer.x = 640; // mode->width;
-		size.integer.y = 480; // mode->height;
+		glfwGetMonitorPhysicalSize(monitor, &size.physical.x, &size.physical.y);
+		size.integer.x = mode->width;
+		size.integer.y = mode->height;
+#else
+		size.physical.x = 169; size.physical.y = 127;
+		size.integer.x = 640;
+		size.integer.y = 480;
+#endif
 		size.floating = size.integer;
+		size.pixel = { 1. / size.integer.x, 1. / size.integer.y };
 		constexpr int mm_in_inch = 254;
 		size.dpi.x = size.integer.x * mm_in_inch / (size.physical.x * 10);
 		size.dpi.y = size.integer.y * mm_in_inch / (size.physical.y * 10);
 		return size;
 		}) },
 	window{ std::invoke([&]() {
-		//auto window{ glfwCreateWindow(size.integer.x, size.integer.y, "The Rose and the Worm", NULL, NULL) };
+#ifdef FULLSCREEN
+		auto window{ glfwCreateWindow(size.integer.x, size.integer.y, "The Rose and the Worm", NULL, NULL) };
+		glfwSetWindowMonitor(window, monitor, 0, 0, size.integer.x, size.integer.y, GLFW_DONT_CARE);
+#else
 		auto window{ glfwCreateWindow(640, 480, "TEST", NULL, NULL) };
-		//glfwSetWindowMonitor(window, monitor, 0, 0, size.integer.x, size.integer.y, GLFW_DONT_CARE);
+#endif
 		glfwMakeContextCurrent(window);
 		gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 		return window;
@@ -38,18 +51,6 @@ Fr::Frame() :
 Fr::~Frame() {
 	glfwTerminate();
 }
-/*
-const Fr& Fr::operator<< (const graphics::Graphics& grph) const {
-	grph.BindBuffer().BindTexture().BindShader().BindUniform();
-	if (grph.Element::Size()) {
-		glDrawElements(grph.Type(), grph.Element::Size(), GL_UNSIGNED_INT, 0);
-	}
-	else {
-		glDrawArrays(grph.Type(), 0, grph.Array::Size());
-	}
-	return *this;
-}
-*/
 const Fr& Fr::Swap() const {
 	glfwSwapBuffers(window);
 	return *this;

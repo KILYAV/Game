@@ -10,6 +10,7 @@ namespace frame {
 		GLFWmonitor* const monitor;
 	public:
 		struct Size {
+			glm::vec2 pixel;
 			glm::vec2 floating;
 			glm::ivec2 integer;
 			glm::ivec2 physical;
@@ -27,6 +28,9 @@ namespace frame {
 		glm::ivec2 Cursor() const {
 			return cursor;
 		}
+		glm::ivec2 Center() const {
+			return { size.integer.x / 2, size.integer.y / 2 };
+		}
 		void (*CallBack)() { DefaultCallBack };
 	public:
 		static Frame frm;
@@ -35,7 +39,6 @@ namespace frame {
 		Frame(const Frame&) = delete;
 		~Frame();
 
-		//const Frame& operator<< (const graphics::Graphics& grph) const;
 		const Frame& Swap() const;
 	private:
 		Frame();

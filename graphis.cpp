@@ -19,20 +19,20 @@ namespace graphic {
 				shader = glCreateShader(GL_XXXX_SHADER);
 				glShaderSource(shader, 1, &ptr, NULL);
 				glCompileShader(shader);
-				
+
 				int success;
 				glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 				if (!success)
-					throw std::invalid_argument{"Compile shader fail"};
+					throw std::invalid_argument{ "Compile shader fail" };
 			}
 			return shader;
 		}
-		unsigned GetShader(const wchar_t* type, int vert, int frag, int geom) {
+		unsigned id::GetShader(const wchar_t* type, int vert, int frag, int geom) {
 			unsigned vertex{ CompileShader(vert, type, GL_VERTEX_SHADER) };
 			unsigned fragment{ CompileShader(frag, type, GL_FRAGMENT_SHADER) };
 			unsigned geometry = 0;
 			if (geom)
-				geometry = CompileShader(frag, type, GL_GEOMETRY_SHADER);
+				geometry = CompileShader(geom, type, GL_GEOMETRY_SHADER);
 
 			auto shader{ glCreateProgram() };
 			glAttachShader(shader, vertex);
@@ -91,33 +91,19 @@ namespace graphic {
 	}
 	namespace shape {
 		namespace rectangle {
-			Rectangle<>::output Rectangle<>::GetRectangle(input rectangle) {
-				float top{ rectangle.y / frm.size.floating.y };
-				float down{ -top };
-				float right{ rectangle.x / frm.size.floating.x };
-				float left{ -right };
-				return output{
-					tuple{ { top, left } },
-					tuple{ { top, right } },
-					tuple{ { down, left } },
-					tuple{ { down, right } }
-				};
-			};
-			std::array<std::tuple<glm::vec2, glm::vec2>, size> GetRectangle(
-				const glm::ivec2 rectangle, const glm::vec2 texture) {
-				auto point{ Rectangle<>::GetRectangle(rectangle) };
-				float width{ rectangle.x / texture.x / 2 };
-				float height{ rectangle.y / texture.y / 2 };
-				float top{ .5f + height };
-				float down{ .5f - height };
-				float left{ .5f - width };
-				float right{ .5f + width };
-				return std::array<std::tuple<glm::vec2, glm::vec2>, size>{
-					std::tuple<glm::vec2, glm::vec2>{ std::get<0>(point[0]), { top, left } },
-						std::tuple<glm::vec2, glm::vec2>{ std::get<0>(point[1]), { top, right } },
-						std::tuple<glm::vec2, glm::vec2>{ std::get<0>(point[2]), { down, left } },
-						std::tuple<glm::vec2, glm::vec2>{ std::get<0>(point[3]), { down, right } }
-				};
+			glm::vec4 GetRegion(const glm::ivec2 pos, const glm::ivec2 size) {
+				float X{ pos.x * frm.size.pixel.x };
+				float Y{ pos.y * frm.size.pixel.y };
+				float W{ size.x * frm.size.pixel.x };
+				float H{ size.y * frm.size.pixel.y };
+				return { Y + H, X + W, Y - H, X - W };
+			}
+			glm::vec4 GetTexture(const glm::ivec2 pos, const glm::ivec2 size_tex, const glm::ivec2 size_rect) {
+				float X{ pos.x * frm.size.pixel.x };
+				float Y{ pos.y * frm.size.pixel.y };
+				float W{ size_tex.x / size_rect.x * .5f };
+				float H{ size_tex.y / size_rect.y * .5f };
+				return { .5 + H + Y, .5 + W + X, .5 - H + Y, .5 - W + X };
 			}
 		}
 	}
@@ -136,20 +122,4 @@ namespace graphic {
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		}
 	}
-	/*
-	std::map<const char*, unsigned> uniforms::GetUniforms(
-		const unsigned shader, const std::vector<const char*> labels) {
-		std::map<const char*, unsigned> uniforms;
-		for (const auto& ptr : labels) {
-			uniforms.emplace(ptr, glGetUniformLocation(shader, ptr));
-		}
-		return uniforms;
-	}
-	bool uniforms::Rectangle::operator== (const glm::ivec2 pos) const {
-		return  value.x < pos.x && pos.x < value.z && value.y < pos.y && pos.y < value.w;
-	}
-	uniforms::Rectangle uniforms::Rectangle::operator- (const int border) const {
-		return glm::vec4{ value.x + border, value.y + border, value.z - border, value.w - border };
-	}
-	*/
 }

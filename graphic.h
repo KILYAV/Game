@@ -1,285 +1,51 @@
 #pragma once
-#include <map>
 #include <tuple>
 #include <array>
 #include <vector>
+#include <functional>
 #include "../glm/glm/glm.hpp"
 #include "../glad/include/glad/glad.h"
 #include "../glfw/include/GLFW/glfw3.h"
-
 #include "resource.h"
+#include "shader.h"
+#include "vertex.h"
 
 namespace graphic {
-	namespace shader {
-		namespace label {
-			static constexpr wchar_t rectangle[] = L"RECTANGLE";
-		}
-		unsigned GetShader(const wchar_t* type, int vert, int frag, int geom = 0);
-		template<const wchar_t* type, int vert, int frag, int geom = 0>
-		class Shader {
-		public:
-			inline static const unsigned shader{ GetShader(type, vert, frag, geom) };
-		protected:
-			static void BindShader() {
-				glUseProgram(shader);
-			}
-		};
-		using Rectangle = Shader<label::rectangle, IDR_RECTANGLE_SHADER_VERT, IDR_RECTANGLE_SHADER_FRAC>;
-	}
-	namespace texture {
-		namespace data {
-			struct Texture {
-				unsigned ID;
-				glm::ivec2 size;
-			};
-		}
-		namespace id {
-			data::Texture GetTexture(const int ID);
-			template<const int ID>
-			class Texture {
-			public:
-				inline static const data::Texture texture{ GetTexture(ID) };
-			protected:
-				static void BindTexture() {
-					glBindTexture(GL_TEXTURE_2D, texture.ID);
-				}
-			};
-		}
-		namespace backdrop {
-			using Main = id::Texture<IDR_BACKDROP_JPG>;
-		}
-		namespace str {
-			data::Texture GetTexture(const wchar_t* label);
-			template<const wchar_t* label>
-			class Texture {
-			public:
-				inline static const data::Texture texture{ GetTexture(label) };
-			protected:
-				static void BindTexture() {
-					glBindTexture(GL_TEXTURE_2D, texture.ID);
-				}
-			};
-		}
-		namespace label {
-			static constexpr wchar_t exit[] = L"EXIT";
-		}
-		namespace button {
-			using Exit = str::Texture<label::exit>;
-		}
-	}
-	namespace shape {
-		namespace rectangle {
-			constexpr size_t size = 4;
-			template<class... Texture>
-			class Rectangle;
-			template<>
-			class Rectangle<> {
-			public:
-				static constexpr size_t size = rectangle::size;
-				using input = const glm::ivec2;
-				using tuple = std::tuple<glm::vec2>;
-				using output = std::array<tuple, size>;
-
-				static output GetRectangle(input rectangle);
-			};
-			std::array<std::tuple<glm::vec2, glm::vec2>, size> GetRectangle(
-				const glm::ivec2 rectangle, const glm::vec2 texture);
-			template<class Texture>
-			class Rectangle<Texture> {
-			public:
-				static constexpr size_t size = rectangle::size;
-				using input = const glm::ivec2;
-				using tuple = std::tuple<glm::vec2, glm::vec2>;
-				using output = std::array<tuple, size>;
-
-				static output GetRectangle(input rectangle) {
-					return rectangle::GetRectangle(rectangle, Texture::texture.size);
-				}
-			};
-		}
-	}
-	namespace vertex {
-		template<class Shape>
-		class Array :
-			public Shape
-		{
-		public:
-			const unsigned VAO;
-			const unsigned VBO;
-		protected:
-			Array(Shape::input array);
-			void BindArray() const {
-				glBindVertexArray(VAO);
-				glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			}
-		private:
-			template<size_t... In>
-			void LoadVertex(const char* data, std::index_sequence<In...>) const;
-		};
-		template<class Shape>
-		Array<Shape>::Array(Shape::input input) :
-			VAO{ std::invoke([]() {
-				unsigned VAO;
-				glGenVertexArrays(1, &VAO);
-				return VAO;
-			}) },
-			VBO{ std::invoke([]() {
-				unsigned VBO;
-				glGenBuffers(1, &VBO);
-				return VBO;
-			}) }
-		{
-			LoadVertex(static_cast<const char*>(static_cast<const void*>(Shape::GetRectangle(input).data())),
-				std::make_index_sequence<std::tuple_size_v<Shape::tuple>>{});
-		}
-		template<class Shape>
-		template<size_t... In>
-		void Array<Shape>::LoadVertex(const char* data, std::index_sequence<In...>) const {
-			glBindVertexArray(VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(Shape::output), data, GL_STATIC_DRAW);
-
-			unsigned offset = 0;
-			(std::invoke([&]() {
-				glVertexAttribPointer(In, sizeof(std::tuple_element_t<In, Shape::tuple>) / sizeof(float),
-					GL_FLOAT, GL_FALSE, sizeof(Shape::tuple), (void*)offset);
-				glEnableVertexAttribArray(In);
-				offset += sizeof(std::tuple_element_t<In, Shape::tuple>);
-				}), ...);
-
-			glBindVertexArray(0);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-		}
-		namespace backdrop {
-			using Main = Array<shape::rectangle::Rectangle<texture::backdrop::Main>>;
-		}
-		namespace button {
-			using Exit = Array<shape::rectangle::Rectangle<texture::button::Exit>>;
-		}
-
-		class Element {
-		public:
-			const unsigned EBO;
-			const unsigned size;
-		protected:
-			Element(const std::vector<unsigned>& indices = {});
-			void BindElement() const {
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-			}
-		};
-	}
 	namespace object {
-		template<class Shader, class Texture, class Array>
+		template<class Shader, template<class> class Vertex, class... Texture>
 		class Object :
 			Shader,
-			Texture,
-			Array
+			Vertex<Texture...>,
+			Texture...
 		{
-		public:
-			Object(Array::input input) :
+		protected:
+			using Shader::Set;
+			Object(Vertex<Texture...>::input_t input) :
 				Shader{},
-				Texture{},
-				Array{ input }
+				Vertex<Texture...>{ input },
+				Texture{}...
 			{}
-		//protected:
-			static unsigned Type() { return 0; };
 			const void Draw() const;
-		private:
-			virtual void BindUniform() const {};
 		};
-		template<class Shader, class Texture, class Array>
-		const void Object<Shader, Texture, Array>::Draw() const {
-			Shader::BindShader();
-			Texture::BindTexture();
-			Array::BindArray();
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, Array::size);
+		template<class Shader, template<class> class Vertex, class... Texture>
+		const void Object<Shader, Vertex, Texture...>::Draw() const {
+			glUseProgram(Shader::shader);
+			glBindVertexArray(Vertex<Texture...>::VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, Vertex<Texture...>::VBO);
+
+			unsigned texture{ GL_TEXTURE0 };
+			(std::invoke([&]() {
+				glActiveTexture(texture++);
+				glBindTexture(GL_TEXTURE_2D, Texture::texture.ID);
+				}), ...);
+
+			glDrawArrays(GL_POINTS, 0, Vertex<Texture...>::size);
+
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
 		};
-		namespace backdrop {
-			using Main = Object<shader::Rectangle, texture::backdrop::Main, vertex::backdrop::Main>;
-		}
-		namespace button {
-			using Exit = Object<shader::Rectangle, texture::button::Exit, vertex::button::Exit>;
-		}
+
+		template<class Texture>
+		using Rectangle = Object<shader::Rectangle, vertex::Rectangle, Texture>;
 	}
-	/*
-	namespace uniforms {
-		std::map<const char*, unsigned> GetUniforms(const unsigned shader, const std::vector<const char*> labels);
-		struct Bool {
-			using type = bool;
-			bool value = true;
-
-			Bool(bool select = true) { value = select; };
-		};
-		struct Flash : Bool {
-			static constexpr const char* label{ "flash" };
-		};
-		struct Rectangle {
-			using type = glm::vec4;
-			glm::vec4 value;
-
-			Rectangle(const glm::vec4 rectangle = {}) :
-				value{ rectangle }
-			{}
-			Rectangle(const glm::ivec2 center, const glm::ivec2 size) :
-				value{ glm::Rectangle(center, size) }
-			{}
-
-			bool operator== (const glm::ivec2) const;
-			Rectangle operator- (const int border) const;
-
-			static constexpr const char* label{ "border" };
-		};
-	}
-	template<class... Type>
-	class Uniform :
-		protected Type...
-	{
-	private:
-		static const std::map<const char*, unsigned> uniforms;
-	public:
-		Uniform() = default;
-		Uniform(const Type&... type) :
-			Type{ type }...
-		{}
-		void BindUniform() const {
-			Binds(std::make_index_sequence<sizeof...(Type)>{});
-		};
-	private:
-		template<size_t... Indices>
-		void Binds(std::index_sequence<Indices...>) const {
-			(Bind<std::tuple_element_t<Indices, std::tuple<Type...>>>(
-				static_cast<const std::tuple_element_t<Indices, std::tuple<Type...>>&>(*this).value), ...);
-		}
-		template<class T, class U>
-		void Bind(const U& value) const;
-		template<>
-		void Bind<uniforms::Rectangle>(const glm::vec4& value) const {
-			glUniform4f(uniforms.find(uniforms::Rectangle::label)->second, value.x, value.y, value.z, value.w);
-		}
-		template<>
-		void Bind<uniforms::Flash>(const bool& value) const {
-			glUniform1i(uniforms.find(uniforms::Flash::label)->second, value);
-		}
-	public:
-		static std::map<const char*, unsigned> GetUniforms(const unsigned shader) {
-			return uniforms::GetUniforms(shader, std::invoke([]() {
-				std::vector<const char*> labels;
-				GetLabels<Type...>(labels);
-				return labels;
-				}));
-		}
-	private:
-		template<class... Type>
-		static void GetLabels(std::vector<const char*>& labels) {
-			(GetLabel<Type>(labels), ...);
-		}
-		template<class Type>
-		static void GetLabel(std::vector<const char*>& labels) {
-			labels.push_back(Type::label);
-		}
-	};
-	namespace uniforms {
-		using Window = Uniform<uniforms::Flash, uniforms::Rectangle>;
-	}
-	*/
 }
