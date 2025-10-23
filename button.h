@@ -5,17 +5,36 @@
 
 namespace button {
 	template<class Texture>
-	class Button :
+	struct Button :
 		Texture,
 		graphic::object::Rectangle<Texture>
 	{
 	public:
-		const glm::ivec4 region;
-
 		using Rectangle = graphic::object::Rectangle<Texture>;
 		using Rectangle::Draw;
 		Button(const std::optional<glm::ivec2> pos = std::nullopt,
 			const std::optional<glm::ivec2> size = std::nullopt);
+		void Frm(frame::Frame& frm) {
+			frm.CallBackCursorPos = CallBackCursorPos;
+			frm.CallBackMouse = CallBackMouse;
+			frm.instant = this;
+		}
+	private:
+		static void CallBackCursorPos(void* instant, const glm::ivec2 pos) {
+			static_cast<Button<Texture>*>(instant)->CallBack(pos);
+		}
+		static void CallBackMouse(void* instant) {
+			static_cast<Button<Texture>*>(instant)->CallBack();
+		}
+		void CallBack(const glm::ivec2 pos) {
+			if (Rectangle::Region(pos))
+				Rectangle::Invert(true);
+			else
+				Rectangle::Invert(false);
+		}
+		void CallBack() {
+			;
+		}
 	};
 	template<class Texture>
 	Button<Texture>::Button(const std::optional<glm::ivec2> pos,
@@ -28,8 +47,7 @@ namespace button {
 				glm::ivec2{},
 				Texture::texture.size
 			}
-		},
-		region{}
+		}
 	{}
 
 	using Exit = Button<graphic::texture::button::Exit>;

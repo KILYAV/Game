@@ -25,7 +25,7 @@ namespace graphic {
 			using Rectangle = Shader<
 				label::rectangle,
 				IDR_RECTANGLE_SHADER_VERT,
-				IDR_RECTANGLE_SHADER_FRAC,
+				IDR_RECTANGLE_SHADER_FRAG,
 				IDR_RECTANGLE_SHADER_GEOM>;
 		}
 	}
@@ -35,7 +35,7 @@ namespace graphic {
 			Shader
 		{
 			using type = glm::vec4;
-			inline static const int uniform{ glGetUniformLocation(Shader::shader, "background_color")};
+			inline static const int uniform{ glGetUniformLocation(Shader::shader, "background_color") };
 		protected:
 			BackgroundColor() :
 				BackgroundColor{ value }
@@ -57,6 +57,38 @@ namespace graphic {
 		private:
 			inline static glm::vec4 value{ 1., 1., 1., 1. };
 		};
+		template<class Shader>
+		struct Status :
+			Shader
+		{
+			inline static constexpr int invert{ 1 };
+
+			using type = int;
+			inline static const int uniform{ glGetUniformLocation(Shader::shader, "status") };
+		protected:
+			Status() :
+				Status{ value }
+			{}
+			Status(const int new_value) {
+				value = new_value;
+				glUniform1i(uniform, value);
+			}
+			int Set(const int new_value) const {
+				if (value != new_value) {
+					value = new_value;
+					glUniform1i(uniform, value);
+				}
+				return value;
+			}
+			int Get() const {
+				return value;
+			}
+			int Invert(bool select) {
+				return select ? Set(value | invert) : Set(value & !invert);
+			}
+		private:
+			inline static int value;
+		};
 	}
 	namespace shader {
 		template<class Base, template<class> class... Uniform>
@@ -66,6 +98,6 @@ namespace graphic {
 		{
 			Shader() = default;
 		};
-		using Rectangle = Shader<id::Rectangle, uniform::BackgroundColor>;
+		using Rectangle = Shader<id::Rectangle, uniform::Status>;
 	}
 }

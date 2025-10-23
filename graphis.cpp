@@ -10,7 +10,7 @@
 
 namespace graphic {
 	namespace shader {
-		unsigned CompileShader(const int glsl, const wchar_t* type, const int GL_XXXX_SHADER) {
+		unsigned CompileShader(const wchar_t* type, const int glsl, const int GL_XXXX_SHADER) {
 			auto resource{ FindResource(NULL, MAKEINTRESOURCE(glsl), type) };
 			unsigned shader = 0;
 			if (resource) {
@@ -22,17 +22,18 @@ namespace graphic {
 
 				int success;
 				glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-				if (!success)
-					throw std::invalid_argument{ "Compile shader fail" };
+				if (!success) {
+					char infoLog[512];
+					glGetShaderInfoLog(shader, 512, NULL, infoLog);
+					//throw std::invalid_argument{ "Compile shader fail" };
+				}
 			}
 			return shader;
 		}
 		unsigned id::GetShader(const wchar_t* type, int vert, int frag, int geom) {
-			unsigned vertex{ CompileShader(vert, type, GL_VERTEX_SHADER) };
-			unsigned fragment{ CompileShader(frag, type, GL_FRAGMENT_SHADER) };
-			unsigned geometry = 0;
-			if (geom)
-				geometry = CompileShader(geom, type, GL_GEOMETRY_SHADER);
+			unsigned vertex{ CompileShader(type, vert, GL_VERTEX_SHADER) };
+			unsigned fragment{ CompileShader(type, frag, GL_FRAGMENT_SHADER) };
+			unsigned geometry{ geom ? CompileShader(type, geom, GL_GEOMETRY_SHADER) : 0 };
 
 			auto shader{ glCreateProgram() };
 			glAttachShader(shader, vertex);
@@ -91,14 +92,28 @@ namespace graphic {
 	}
 	namespace shape {
 		namespace rectangle {
-			glm::vec4 GetRegion(const glm::ivec2 pos, const glm::ivec2 size) {
-				float X{ pos.x * frm.size.pixel.x };
-				float Y{ pos.y * frm.size.pixel.y };
-				float W{ size.x * frm.size.pixel.x };
-				float H{ size.y * frm.size.pixel.y };
-				return { Y + H, X + W, Y - H, X - W };
+			glm::ivec4 Rectangle::GetRegion(const glm::ivec2 pos, const glm::ivec2 size) {
+				int R{ pos.x + ((size.x + 1) >> 1) };
+				int U{ pos.y + ((size.y + 1) >> 1) };
+				int L{ R - size.x };
+				int D{ U - size.y };
+				return { U, R, D, L };
 			}
-			glm::vec4 GetTexture(const glm::ivec2 pos, const glm::ivec2 size_tex, const glm::ivec2 size_rect) {
+			glm::vec4 Rectangle::GetRegion(const glm::ivec2 pos, const glm::ivec4 region) {
+				float X{ pos.x * frm.size.pixel.x * 2};
+				float Y{ pos.y * frm.size.pixel.y * 2};
+				float W{ (region.y - pos.x) * frm.size.pixel.x * 2 };
+				float H{ (region.x - pos.y) * frm.size.pixel.y * 2 };
+				float R{ X + W - frm.size.pixel.x * .5f };
+				float U{ Y + H - frm.size.pixel.x * .5f };
+				W = { (pos.x - region.w) * frm.size.pixel.x };
+				H = { (pos.y - region.z) * frm.size.pixel.x };
+				float L{ X - W + frm.size.pixel.x * .5f };
+				float D{ Y - H + frm.size.pixel.x * .5f };
+				return { U, R, D, L };
+			}
+			glm::vec4 Rectangle::GetTexture(const glm::ivec2 pos, const glm::ivec2 size_tex,
+				const glm::ivec2 size_rect) {
 				float X{ pos.x * frm.size.pixel.x };
 				float Y{ pos.y * frm.size.pixel.y };
 				float W{ size_tex.x / size_rect.x * .5f };

@@ -1,12 +1,14 @@
 #version 330 core
-layout (location = 0) in vec4 rectangle;
-layout (location = 1) in vec4 texture_0;
-layout (location = 2) in vec4 texture_1;
+layout (location = 0) in vec4 in_rectangle;
+layout (location = 1) in vec4 in_region_0;
 
+out vec4 rectangle;
 out vec4 region_0;
+
+uniform int status;
 
 void main()
 {
-	gl_Position = rectangle;
-	region_0 = texture_0;
+	rectangle = in_rectangle;
+	region_0 = in_region_0;
 }

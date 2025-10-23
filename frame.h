@@ -17,13 +17,14 @@ namespace frame {
 			glm::ivec2 dpi;
 		} const size;
 		GLFWwindow* const window;
-	private:
-		glm::vec2 cursor{ 0, 0 };
 		struct Mouse {
 			int button;
 			int action;
 			int mods;
-		} mouse{ 0, 0, 0 };
+		};
+	private:
+		glm::ivec2 cursor{ 0, 0 };
+		Mouse mouse{ 0, 0, 0 };
 	public:
 		glm::ivec2 Cursor() const {
 			return cursor;
@@ -31,7 +32,9 @@ namespace frame {
 		glm::ivec2 Center() const {
 			return { size.integer.x / 2, size.integer.y / 2 };
 		}
-		void (*CallBack)() { DefaultCallBack };
+		void* instant = nullptr;
+		void (*CallBackCursorPos)(void*, glm::ivec2) = nullptr;
+		void (*CallBackMouse)(void*) = nullptr;
 	public:
 		static Frame frm;
 
@@ -44,7 +47,6 @@ namespace frame {
 		Frame();
 		static void CursorPosCallBack(GLFWwindow* window, double xpos, double ypos);
 		static void MouseCallBack(GLFWwindow* window, int button, int action, int mods);
-		static void DefaultCallBack() {};
 	};
 }
 static frame::Frame& frm = frame::Frame::frm;

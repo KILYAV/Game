@@ -2,8 +2,10 @@
 layout (points) in;
 layout (triangle_strip, max_vertices = 4) out;
 
+in vec4 rectangle[];
 in vec4 region_0[];
-out vec2 region_2;
+
+out vec2 coord_0;
 
 vec2[4] Unpuck(const vec4 region) {
 	vec2[4] result;
@@ -16,12 +18,12 @@ vec2[4] Unpuck(const vec4 region) {
 
 void main()
 {
-	vec2[4] position = Unpuck(gl_in[0].gl_Position);
-	vec2[4] coord = Unpuck(region_0[0]);
+	vec2[4] rectangle_ = Unpuck(rectangle[0]);
+	vec2[4] texture_ = Unpuck(region_0[0]);
 
 	for (int index = 0; index < 4; ++index) {
-		gl_Position = vec4(position[index], 0., 1.);
-		region_2 = coord[index];
+		gl_Position = vec4(rectangle_[index], 0., 1.);
+		coord_0 = texture_[index];
 		EmitVertex();
 	}
 	EndPrimitive();

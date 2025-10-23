@@ -12,8 +12,7 @@ namespace graphic {
 		namespace id {
 			data::Texture GetTexture(const int ID);
 			template<const int ID>
-			class Texture {
-			public:
+			struct Texture {
 				inline static const data::Texture texture{ GetTexture(ID) };
 			protected:
 				static void BindTexture() {
@@ -24,8 +23,7 @@ namespace graphic {
 		namespace str {
 			data::Texture GetTexture(const wchar_t* label);
 			template<const wchar_t* label>
-			class Texture {
-			public:
+			struct Texture {
 				inline static const data::Texture texture{ GetTexture(label) };
 			protected:
 				static void BindTexture() {

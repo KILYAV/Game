@@ -13,13 +13,12 @@
 namespace graphic {
 	namespace object {
 		template<class Shader, template<class> class Vertex, class... Texture>
-		class Object :
+		struct Object :
 			Shader,
 			Vertex<Texture...>,
 			Texture...
 		{
 		protected:
-			using Shader::Set;
 			Object(Vertex<Texture...>::input_t input) :
 				Shader{},
 				Vertex<Texture...>{ input },

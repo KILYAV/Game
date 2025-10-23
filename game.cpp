@@ -9,14 +9,11 @@ setting::Setting setting::Setting::stt;
 frame::Frame frame::Frame::frm;
 font::Font font::Font::fnt;
 
-void Callback() {
-
-}
 int main()
 {
-	button::Exit exit;
+	button::Exit exit{};
 
-	//frm.CallBack = nullptr;
+	exit.Frm(frm);
 	MSG msg;
 	while (GetMessage(&msg, nullptr, 0, 0)) {
 		DispatchMessage(&msg);
