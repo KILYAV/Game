@@ -15,76 +15,109 @@ namespace graphic {
 					return pos.x >= region.w && pos.x < region.y && pos.y >= region.z && pos.y < region.x;
 				}
 				template<size_t count>
-				std::array<glm::vec4, count + 1> Get(const std::array<glm::ivec2, (count + 1) * 2>& input);
+				using input_t = std::pair<std::pair<glm::ivec2, glm::ivec2>, std::array<glm::ivec2, count * 2>>;
+				template<size_t count>
+				using output_t = std::pair<std::pair<glm::vec4, glm::vec4>, std::array<glm::vec4, count>>;
+				template<size_t count>
+				output_t<count> Get(const input_t<count>& input);
+				std::array<glm::vec4, 2> GetPair(const std::pair<glm::ivec2, glm::ivec2> input);
 			private:
-				glm::ivec4 GetRegion(const glm::ivec2 pos, const glm::ivec2 size);
-				glm::vec4 GetRegion(const glm::ivec2 pos, const glm::ivec4 region);
+				glm::ivec4 GetRegion(const glm::ivec2 pos, const glm::ivec2 size) const;
+				glm::vec4 GetBorder(const glm::ivec4 region) const;
+				glm::vec4 GetRectangle(const glm::ivec4 region) const;
 				glm::vec4 GetTexture(const glm::ivec2 pos, const glm::ivec2 size_tex,
-					const glm::ivec2 size_rect);
+					const glm::ivec2 size_rect) const;
 				glm::ivec4 region;
 			};
 			template<size_t count>
-			std::array<glm::vec4, count + 1> Rectangle::Get(
-				const std::array<glm::ivec2, (count + 1) * 2>& input) {
-				region = GetRegion(input[0], input[1]);
+			Rectangle::output_t<count> Rectangle::Get(const input_t<count>& input) {
+				output_t<count> result;
 
-				std::array<glm::vec4, count + 1> result;
-				result[0] = GetRegion(input[0], region);
-				for (int index = 1, max = count + 1; index < max; ++index) {
-					result[index] = GetTexture(input[index * 2], input[index * 2 + 1], input[1]);
+				auto& pos{ input.first.first };
+				auto& size{ input.first.second };
+				auto& border{ result.first.first };
+				auto& rectangle{ result.first.second };
+
+				region = GetRegion(pos, size);
+				border = GetBorder(region);
+				rectangle = GetRectangle(region);
+
+				if constexpr (count) {
+					for (int index = 0; index < count; ++index) {
+						auto& pos{ input.second[index * 2] };
+						auto& size{ input.second[index * 2 + 1] };
+						result.second[index] = GetTexture(pos, size, input.first.second);
+					}
 				}
 				return result;
 			}
 		}
 	}
 	namespace vertex {
+		namespace base {
+			struct Array {
+				const unsigned VAO;
+				const unsigned VBO;
+				Array();
+			protected:
+				void LoadVertex(const std::array<glm::vec4, 2> input);
+			};
+		}
 		template<class Shape, class... Texture>
 		struct Array :
+			base::Array,
 			Shape
 		{
-			const unsigned VAO;
-			const unsigned VBO;
-
-			using input_t = std::array<glm::ivec2, (sizeof...(Texture) + 1) * 2>;
+			using input_t = Shape::template input_t<sizeof...(Texture)>;
 		protected:
 			Array();
+			Array(const std::pair<glm::ivec2, glm::ivec2> input);
 			Array(const input_t& input);
 		protected:
 			void LoadVertex(const input_t& input);
 		};
 		template<class Shape, class... Texture>
 		Array<Shape, Texture...>::Array() :
-			VAO{ std::invoke([]() {
-				unsigned VAO;
-				glGenVertexArrays(1, &VAO);
-				return VAO;
-			}) },
-			VBO{ std::invoke([]() {
-				unsigned VBO;
-				glGenBuffers(1, &VBO);
-				return VBO;
-			}) }
+			base::Array{},
+			Shape{}
 		{}
 		template<class Shape, class... Texture>
+		Array<Shape, Texture...>::Array(const std::pair<glm::ivec2, glm::ivec2> input) :
+			base::Array{}
+		{
+			base::Array::LoadVertex(this->Shape::GetPair(input));
+		}
+		template<class Shape, class... Texture>
 		Array<Shape, Texture...>::Array(const input_t& input) :
-			Array{}
+			base::Array{}
 		{
 			LoadVertex(input);
 		}
 		template<class Shape, class... Texture>
 		void Array<Shape, Texture...>::LoadVertex(const input_t& input) {
-			using array_t = std::array<glm::vec4, sizeof...(Texture) + 1>;
-			array_t array{ this->Shape::Get<sizeof...(Texture)>(input)};
+			using array_t = Shape::template output_t<sizeof...(Texture)>;
+			array_t array{this->Shape::Get<sizeof...(Texture)>(input)};
 
 			glBindVertexArray(VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(array_t), array.data(), GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(array_t), &array, GL_STATIC_DRAW);
 
-			for (unsigned index = 0, max = sizeof...(Texture) + 1, offset = 0; index < max; ++index) {
-				glVertexAttribPointer(index, sizeof(array_t::value_type) / sizeof(float),
-					GL_FLOAT, GL_FALSE, sizeof(array_t), (void*)offset);
+			unsigned index = 0;
+			unsigned offset = 0;
+			glVertexAttribPointer(index, sizeof(glm::ivec4) / sizeof(float), GL_FLOAT, GL_FALSE,
+				sizeof(glm::ivec4), (void*)offset);
+			offset += sizeof(glm::ivec4);
+			glEnableVertexAttribArray(index++);
+			glVertexAttribPointer(index, sizeof(glm::ivec4) / sizeof(float), GL_FLOAT, GL_FALSE,
+				sizeof(glm::ivec4), (void*)offset);
+			offset += sizeof(glm::ivec4);
+			glEnableVertexAttribArray(index++);
+
+			for (unsigned max = sizeof...(Texture) + 2; index < max; ++index) {
+				glVertexAttribPointer(index, sizeof(glm::vec4) / sizeof(float),
+					GL_FLOAT, GL_FALSE, sizeof(glm::vec4), (void*)offset);
 				glEnableVertexAttribArray(index);
-				offset += sizeof(array_t::value_type);
+				offset += sizeof(glm::vec4);
 			}
 
 			glBindBuffer(GL_ARRAY_BUFFER, 0);

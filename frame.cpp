@@ -4,15 +4,17 @@
 #define FULLSCREEN
 #undef FULLSCREEN
 
-namespace frame {
-	Frame::Frame() :
-		monitor{ std::invoke([]() {
+namespace window {
+	Window::Window() :
+		Window{ std::invoke([]() {
 			glfwInit();
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 			return glfwGetPrimaryMonitor();
-			}) },
+			})}
+	{}
+	Window::Window(GLFWmonitor* const monitor) :
 		size{ std::invoke([&]() {
 			Size size;
 	#ifdef FULLSCREEN
@@ -26,6 +28,7 @@ namespace frame {
 			size.integer.y = 480;
 	#endif
 			size.floating = size.integer;
+			size.center = { size.integer.x >> 1, size.integer.y >> 1 };
 			size.pixel = { 1. / size.integer.x, 1. / size.integer.y };
 			constexpr int mm_in_inch = 254;
 			size.dpi.x = size.integer.x * mm_in_inch / (size.physical.x * 10);
@@ -44,29 +47,17 @@ namespace frame {
 			return window;
 			}) }
 	{
-		glfwSetWindowUserPointer(window, this);
 		glfwSetCursorPosCallback(window, CursorPosCallBack);
 		glfwSetMouseButtonCallback(window, MouseCallBack);
 	}
-	Frame::~Frame() {
+	Window::~Window() {
 		glfwTerminate();
 	}
-	const Frame& Frame::Swap() const {
-		glfwSwapBuffers(window);
-		return *this;
+	void Window::CursorPosCallBack(GLFWwindow* window, double xpos, double ypos) {
+		CallBack(glfwGetWindowUserPointer(window),
+			glm::ivec2{ xpos - frm.size.center.x, ypos - frm.size.center.y });
 	}
-	void Frame::CursorPosCallBack(GLFWwindow* window, double xpos, double ypos) {
-		Frame* frame{ static_cast<Frame*>(glfwGetWindowUserPointer(window)) };
-		glm::ivec2 cursor{ xpos - (frm.size.floating.x * .5), ypos - (frm.size.floating.y * .5) };
-		frame->CallBackCursorPos(frm.instant, cursor);
-		frame->cursor = cursor;
-	}
-	void Frame::MouseCallBack(GLFWwindow* window, int button, int action, int mods) {
-		Frame* frame{ static_cast<Frame*>(glfwGetWindowUserPointer(window)) };
-		frame->mouse = { button, action, mods };
-		frame->CallBackMouse(frm.instant);
-		/*
-			PostQuitMessage(0);
-		*/
+	void Window::MouseCallBack(GLFWwindow* window, int button, int action, int mods) {
+		CallBack(glfwGetWindowUserPointer(window), std::tuple{ button, action, mods });
 	}
 }

@@ -18,16 +18,18 @@ namespace graphic {
 			Vertex<Texture...>,
 			Texture...
 		{
+			using input_t = Vertex<Texture...>::input_t;
 		protected:
-			Object(Vertex<Texture...>::input_t input) :
+			template<typename Input_t>
+			Object(Input_t input) :
 				Shader{},
 				Vertex<Texture...>{ input },
 				Texture{}...
 			{}
-			const void Draw() const;
+			void Draw() const;
 		};
 		template<class Shader, template<class> class Vertex, class... Texture>
-		const void Object<Shader, Vertex, Texture...>::Draw() const {
+		void Object<Shader, Vertex, Texture...>::Draw() const {
 			glUseProgram(Shader::shader);
 			glBindVertexArray(Vertex<Texture...>::VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, Vertex<Texture...>::VBO);
@@ -44,7 +46,7 @@ namespace graphic {
 			glBindVertexArray(0);
 		};
 
-		template<class Texture>
-		using Rectangle = Object<shader::Rectangle, vertex::Rectangle, Texture>;
+		template<class... Texture>
+		using Rectangle = Object<shader::Rectangle, vertex::Rectangle, Texture...>;
 	}
 }

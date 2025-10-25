@@ -6,6 +6,9 @@
 #include FT_FREETYPE_H
 
 namespace font {
+	auto& stt = setting::Setting::stt;
+	auto& frm = window::Window::frm;
+
 	Glyph::Glyph(const Glyph& glyph) :
 		bitmap::BitMap<bitmap::Red>{ static_cast<const bitmap::BitMap<bitmap::Red>&>(glyph) },
 		pos{ glyph.pos },

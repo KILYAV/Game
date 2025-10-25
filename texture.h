@@ -31,14 +31,5 @@ namespace graphic {
 				}
 			};
 		}
-		namespace background {
-			using Main = id::Texture<IDR_BACKDROP_JPG>;
-		}
-		namespace label {
-			static constexpr wchar_t exit[] = L"EXIT";
-		}
-		namespace button {
-			using Exit = str::Texture<label::exit>;
-		}
 	}
 }

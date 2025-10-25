@@ -9,9 +9,11 @@
 #include "stb_image.h"
 
 namespace graphic {
+	auto& frm = window::Window::frm;
+
 	namespace shader {
-		unsigned CompileShader(const wchar_t* type, const int glsl, const int GL_XXXX_SHADER) {
-			auto resource{ FindResource(NULL, MAKEINTRESOURCE(glsl), type) };
+		unsigned CompileShader(const char* str, const int glsl, const int GL_XXXX_SHADER) {
+			auto resource{ FindResourceA(NULL, MAKEINTRESOURCEA(glsl), str) };
 			unsigned shader = 0;
 			if (resource) {
 				auto data{ LockResource(LoadResource(NULL, resource)) };
@@ -25,15 +27,15 @@ namespace graphic {
 				if (!success) {
 					char infoLog[512];
 					glGetShaderInfoLog(shader, 512, NULL, infoLog);
-					//throw std::invalid_argument{ "Compile shader fail" };
+					throw std::invalid_argument{ "Compile shader fail" };
 				}
 			}
 			return shader;
 		}
-		unsigned id::GetShader(const wchar_t* type, int vert, int frag, int geom) {
-			unsigned vertex{ CompileShader(type, vert, GL_VERTEX_SHADER) };
-			unsigned fragment{ CompileShader(type, frag, GL_FRAGMENT_SHADER) };
-			unsigned geometry{ geom ? CompileShader(type, geom, GL_GEOMETRY_SHADER) : 0 };
+		unsigned id::GetShader(const char* str, int vert, int frag, int geom) {
+			unsigned vertex{ CompileShader(str, vert, GL_VERTEX_SHADER)};
+			unsigned fragment{ CompileShader(str, frag, GL_FRAGMENT_SHADER)};
+			unsigned geometry{ geom ? CompileShader(str, geom, GL_GEOMETRY_SHADER) : 0};
 
 			auto shader{ glCreateProgram() };
 			glAttachShader(shader, vertex);
@@ -45,13 +47,28 @@ namespace graphic {
 			int success;
 			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 			if (!success)
-				throw std::invalid_argument{ "Link shader fail" };
+				throw std::invalid_argument{ "Link " + std::string{ str } + " shader fail" };
 
 			glDeleteShader(vertex);
 			glDeleteShader(fragment);
 			if (geometry)
 				glDeleteShader(geometry);
 			return shader;
+		}
+	}
+	namespace uniform {
+		namespace block {
+			unsigned GetBlock(const unsigned ranges, const unsigned size) {
+				unsigned block = 0;
+				glGenBuffers(1, &block);
+
+				glBindBuffer(GL_UNIFORM_BUFFER, block);
+				glBufferData(GL_UNIFORM_BUFFER, size, NULL, GL_STATIC_DRAW);
+				glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+				glBindBufferRange(GL_UNIFORM_BUFFER, ranges, block, 0, size);
+				return block;
+			}
 		}
 	}
 	namespace texture {
@@ -85,44 +102,78 @@ namespace graphic {
 		}
 		namespace str {
 			data::Texture GetTexture(const wchar_t* label) {
-				auto bitmap{ fnt.GetBitMap(label) };
+				auto bitmap{ font::Font::fnt.GetBitMap(label) };
 				return { LoadTexture(bitmap.Data(), bitmap.GetSize(), false), bitmap.GetSize() };
 			}
 		}
 	}
 	namespace shape {
 		namespace rectangle {
-			glm::ivec4 Rectangle::GetRegion(const glm::ivec2 pos, const glm::ivec2 size) {
+			std::array<glm::vec4, 2> Rectangle::GetPair(const std::pair<glm::ivec2, glm::ivec2> input) {
+				auto region{ GetRegion(input.first, input.second) };
+				return { GetBorder(region), GetRectangle(region) };
+			}
+			glm::ivec4 Rectangle::GetRegion(const glm::ivec2 pos, const glm::ivec2 size) const {
 				int R{ pos.x + ((size.x + 1) >> 1) };
 				int U{ pos.y + ((size.y + 1) >> 1) };
 				int L{ R - size.x };
 				int D{ U - size.y };
 				return { U, R, D, L };
 			}
-			glm::vec4 Rectangle::GetRegion(const glm::ivec2 pos, const glm::ivec4 region) {
-				float X{ pos.x * frm.size.pixel.x * 2};
-				float Y{ pos.y * frm.size.pixel.y * 2};
-				float W{ (region.y - pos.x) * frm.size.pixel.x * 2 };
-				float H{ (region.x - pos.y) * frm.size.pixel.y * 2 };
-				float R{ X + W - frm.size.pixel.x * .5f };
-				float U{ Y + H - frm.size.pixel.x * .5f };
-				W = { (pos.x - region.w) * frm.size.pixel.x };
-				H = { (pos.y - region.z) * frm.size.pixel.x };
-				float L{ X - W + frm.size.pixel.x * .5f };
-				float D{ Y - H + frm.size.pixel.x * .5f };
+			glm::vec4 Rectangle::GetBorder(const glm::ivec4 region) const {
+				float U{ static_cast<float>(region.x + frm.size.center.y) };
+				float R{ static_cast<float>(region.y + frm.size.center.x) };
+				float D{ static_cast<float>(region.z + frm.size.center.y) };
+				float L{ static_cast<float>(region.w + frm.size.center.x) };
 				return { U, R, D, L };
 			}
-			glm::vec4 Rectangle::GetTexture(const glm::ivec2 pos, const glm::ivec2 size_tex,
-				const glm::ivec2 size_rect) {
+			glm::vec4 Rectangle::GetRectangle(const glm::ivec4 region) const {
+				float U{ region.x * frm.size.pixel.y * 2 };
+				float R{ region.y * frm.size.pixel.x * 2 };
+				float D{ region.z * frm.size.pixel.y * 2 };
+				float L{ region.w * frm.size.pixel.x * 2 };
+				return { U, R, D, L };
+			}
+			glm::vec4 Rectangle::GetTexture(const glm::ivec2 pos, const glm::ivec2 texture,
+				const glm::ivec2 rectangle) const {
 				float X{ pos.x * frm.size.pixel.x };
 				float Y{ pos.y * frm.size.pixel.y };
-				float W{ size_tex.x / size_rect.x * .5f };
-				float H{ size_tex.y / size_rect.y * .5f };
-				return { .5 + H + Y, .5 + W + X, .5 - H + Y, .5 - W + X };
+				float W{ rectangle.x * .5f / texture.x };
+				float H{ rectangle.y * .5f / texture.y };
+				return { .5f + H + Y, .5f + W + X, .5f - H + Y, .5f - W + X };
 			}
 		}
 	}
 	namespace vertex {
+		namespace base {
+			Array::Array() :
+				VAO{ std::invoke([]() {
+					unsigned VAO;
+					glGenVertexArrays(1, &VAO);
+					return VAO;
+				}) },
+				VBO{ std::invoke([]() {
+					unsigned VBO;
+					glGenBuffers(1, &VBO);
+					return VBO;
+				}) }
+			{}
+			void Array::LoadVertex(const std::array<glm::vec4, 2> input) {
+				glBindVertexArray(VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, VBO);
+				glBufferData(GL_ARRAY_BUFFER, sizeof(std::array<glm::vec4, 2>), &input, GL_STATIC_DRAW);
+
+				glVertexAttribPointer(0, sizeof(glm::ivec4) / sizeof(float), GL_FLOAT, GL_FALSE,
+					sizeof(glm::ivec4), (void*)0);
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(1, sizeof(glm::ivec4) / sizeof(float), GL_FLOAT, GL_FALSE,
+					sizeof(glm::ivec4), (void*)sizeof(glm::ivec4));
+				glEnableVertexAttribArray(1);
+
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				glBindVertexArray(0);
+			}
+		}
 		Element::Element(const std::vector<unsigned>& indices) :
 			EBO{ std::invoke([]() {
 				unsigned EBO;

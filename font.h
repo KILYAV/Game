@@ -44,6 +44,7 @@ namespace font {
 	private:
 		Font();
 	};
+#ifdef LEON_OPENGL_IMPLEMENTATION
+	Font Font::fnt;
+#endif
 }
-
-static font::Font& fnt = font::Font::fnt;

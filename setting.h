@@ -2,6 +2,8 @@
 
 namespace setting {
 	class Setting {
+	private:
+		//bool full_screen = false;
 	public:
 		struct Font {
 			unsigned ID;
@@ -19,5 +21,7 @@ namespace setting {
 	private:
 		Setting();
 	};
+#ifdef LEON_OPENGL_IMPLEMENTATION
+	Setting Setting::stt;
+#endif
 }
-static setting::Setting& stt = setting::Setting::stt;
