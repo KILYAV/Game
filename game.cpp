@@ -2,8 +2,7 @@
 #include "setting.h"
 #include "frame.h"
 #include "font.h"
-#include "graphic.h"
-#include "button.h"
+#include "menu.h"
 
 int main()
 {

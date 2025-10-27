@@ -54,10 +54,18 @@ namespace window {
 		glfwTerminate();
 	}
 	void Window::CursorPosCallBack(GLFWwindow* window, double xpos, double ypos) {
-		CallBack(glfwGetWindowUserPointer(window),
-			glm::ivec2{ xpos - frm.size.center.x, ypos - frm.size.center.y });
+		void* instant{ glfwGetWindowUserPointer(window) };
+		CallBack(instant, glm::ivec2{ xpos - frm.size.center.x, ypos - frm.size.center.y }, std::nullopt);
+		CallPaint(instant);
+		glfwSwapBuffers(window);
 	}
 	void Window::MouseCallBack(GLFWwindow* window, int button, int action, int mods) {
-		CallBack(glfwGetWindowUserPointer(window), std::tuple{ button, action, mods });
+		void* instant{ glfwGetWindowUserPointer(window) };
+		double xpos, ypos;
+		glfwGetCursorPos(window, &xpos, &ypos);
+		CallBack(instant, glm::ivec2{ xpos - frm.size.center.x, ypos - frm.size.center.y },
+			std::tuple{ button, action, mods });
+		CallPaint(instant);
+		glfwSwapBuffers(window);
 	}
 }

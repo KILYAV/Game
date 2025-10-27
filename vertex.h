@@ -6,14 +6,17 @@ namespace graphic {
 	namespace shape {
 		namespace rectangle {
 			struct Rectangle {
+			private:
+				glm::ivec4 region;
+			public:
 				static constexpr size_t size = 1;
 
+				bool Region(const glm::ivec2 pos) const;
+				glm::ivec4 Region(const glm::ivec2 pos, const glm::ivec2 size);
 				glm::ivec4 Region() const {
 					return region;
 				}
-				bool Region(const glm::ivec2 pos) const {
-					return pos.x >= region.w && pos.x < region.y && pos.y >= region.z && pos.y < region.x;
-				}
+
 				template<size_t count>
 				using input_t = std::pair<std::pair<glm::ivec2, glm::ivec2>, std::array<glm::ivec2, count * 2>>;
 				template<size_t count>
@@ -22,12 +25,10 @@ namespace graphic {
 				output_t<count> Get(const input_t<count>& input);
 				std::array<glm::vec4, 2> GetPair(const std::pair<glm::ivec2, glm::ivec2> input);
 			private:
-				glm::ivec4 GetRegion(const glm::ivec2 pos, const glm::ivec2 size) const;
 				glm::vec4 GetBorder(const glm::ivec4 region) const;
 				glm::vec4 GetRectangle(const glm::ivec4 region) const;
 				glm::vec4 GetTexture(const glm::ivec2 pos, const glm::ivec2 size_tex,
 					const glm::ivec2 size_rect) const;
-				glm::ivec4 region;
 			};
 			template<size_t count>
 			Rectangle::output_t<count> Rectangle::Get(const input_t<count>& input) {
@@ -38,9 +39,9 @@ namespace graphic {
 				auto& border{ result.first.first };
 				auto& rectangle{ result.first.second };
 
-				region = GetRegion(pos, size);
-				border = GetBorder(region);
-				rectangle = GetRectangle(region);
+				Region(pos, size);
+				border = GetBorder(Region());
+				rectangle = GetRectangle(Region());
 
 				if constexpr (count) {
 					for (int index = 0; index < count; ++index) {
@@ -75,6 +76,10 @@ namespace graphic {
 			Array(const input_t& input);
 		protected:
 			void LoadVertex(const input_t& input);
+			void Bind() const {
+				glBindVertexArray(VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, VBO);
+			}
 		};
 		template<class Shape, class... Texture>
 		Array<Shape, Texture...>::Array() :
@@ -83,13 +88,15 @@ namespace graphic {
 		{}
 		template<class Shape, class... Texture>
 		Array<Shape, Texture...>::Array(const std::pair<glm::ivec2, glm::ivec2> input) :
-			base::Array{}
+			base::Array{},
+			Shape{}
 		{
-			base::Array::LoadVertex(this->Shape::GetPair(input));
+			base::Array::LoadVertex(Shape::GetPair(input));
 		}
 		template<class Shape, class... Texture>
 		Array<Shape, Texture...>::Array(const input_t& input) :
-			base::Array{}
+			base::Array{},
+			Shape{}
 		{
 			LoadVertex(input);
 		}

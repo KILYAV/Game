@@ -16,10 +16,11 @@ namespace graphic {
 			auto resource{ FindResourceA(NULL, MAKEINTRESOURCEA(glsl), str) };
 			unsigned shader = 0;
 			if (resource) {
+				int size{ static_cast<int>(SizeofResource(NULL, resource)) };
 				auto data{ LockResource(LoadResource(NULL, resource)) };
 				auto ptr = static_cast<const char*>(data);
 				shader = glCreateShader(GL_XXXX_SHADER);
-				glShaderSource(shader, 1, &ptr, NULL);
+				glShaderSource(shader, 1, &ptr, &size);
 				glCompileShader(shader);
 
 				int success;
@@ -109,16 +110,19 @@ namespace graphic {
 	}
 	namespace shape {
 		namespace rectangle {
-			std::array<glm::vec4, 2> Rectangle::GetPair(const std::pair<glm::ivec2, glm::ivec2> input) {
-				auto region{ GetRegion(input.first, input.second) };
-				return { GetBorder(region), GetRectangle(region) };
+			bool Rectangle::Region(const glm::ivec2 pos) const {
+				return pos.x >= region.w && pos.x < region.y && pos.y >= region.z && pos.y < region.x;
 			}
-			glm::ivec4 Rectangle::GetRegion(const glm::ivec2 pos, const glm::ivec2 size) const {
+			glm::ivec4 Rectangle::Region(const glm::ivec2 pos, const glm::ivec2 size) {
 				int R{ pos.x + ((size.x + 1) >> 1) };
 				int U{ pos.y + ((size.y + 1) >> 1) };
 				int L{ R - size.x };
 				int D{ U - size.y };
-				return { U, R, D, L };
+				return region = { U, R, D, L };
+			}
+			std::array<glm::vec4, 2> Rectangle::GetPair(const std::pair<glm::ivec2, glm::ivec2> input) {
+				Region(input.first, input.second);
+				return { GetBorder(Region()), GetRectangle(Region()) };
 			}
 			glm::vec4 Rectangle::GetBorder(const glm::ivec4 region) const {
 				float U{ static_cast<float>(region.x + frm.size.center.y) };

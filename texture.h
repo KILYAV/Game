@@ -14,10 +14,6 @@ namespace graphic {
 			template<const int ID>
 			struct Texture {
 				inline static const data::Texture texture{ GetTexture(ID) };
-			protected:
-				static void BindTexture() {
-					glBindTexture(GL_TEXTURE_2D, texture.ID);
-				}
 			};
 		}
 		namespace str {
@@ -25,11 +21,15 @@ namespace graphic {
 			template<const wchar_t* label>
 			struct Texture {
 				inline static const data::Texture texture{ GetTexture(label) };
-			protected:
-				static void BindTexture() {
-					glBindTexture(GL_TEXTURE_2D, texture.ID);
-				}
 			};
+		}
+		template<class... Texture>
+		void Bind() {
+			unsigned texture{ GL_TEXTURE0 };
+			(std::invoke([&]() {
+				glActiveTexture(texture++);
+				glBindTexture(GL_TEXTURE_2D, Texture::texture.ID);
+				}), ...);
 		}
 	}
 }

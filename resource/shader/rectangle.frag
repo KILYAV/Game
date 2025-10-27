@@ -1,6 +1,7 @@
 #version 420 core
-#define INVERT 0x01
-#define BORDER 0x02
+#define FOCUS  0x01
+#define INVERT 0x02
+#define BORDER 0x04
 #define EQ(status,member) (member == (status & member))
 
 layout (std140) uniform Button {
@@ -17,7 +18,7 @@ void Texture() {
 	gl_FragColor = texture(texture_0, geom_texture_0);
 }
 void Invert(const int status) {
-	if (EQ(status,INVERT))
+	if (EQ(status,FOCUS) && EQ(status,INVERT))
 		gl_FragColor = vec4(1. - gl_FragColor.r, gl_FragColor.gba);
 }
 void Border(const int status) {

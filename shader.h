@@ -12,9 +12,6 @@ namespace graphic {
 			struct Shader {
 				inline static constexpr std::string_view label{ str };
 				inline static const unsigned shader{ GetShader(str, vert, frag, geom) };
-				Shader() {
-					glUseProgram(shader);
-				}
 			};
 		}
 	}
@@ -95,37 +92,47 @@ namespace graphic {
 			Shader
 		{
 			inline static constexpr std::string_view label{ "status" };
-			static constexpr int invert = 0x1;
-			static constexpr int border = 0x2;
+			static constexpr int focus = 0x01;
+			static constexpr int invert = 0x02;
+			static constexpr int border = 0x04;
 
 			using type = int;
 			inline static const int uniform{ std::invoke([&]() {
 				std::string str{ std::string{ Shader::label } + "_" + std::string{ label } };
 				return glGetUniformLocation(Shader::shader, str.data());
 				}) };
-		//protected:
-			Status(const int new_value = value) {
-				value = new_value;
-				glUniform1i(uniform, value);
-			}
-			int Set(const int new_value) const {
-				if (value != new_value) {
-					value = new_value;
-					glUniform1i(uniform, value);
+			Status(const int value = global) :
+				local{ value }
+			{}
+			void Bind() const {
+				if (global != local) {
+					global = local;
+					glUniform1i(uniform, global);
 				}
-				return value;
 			}
 			int Get() const {
-				return value;
+				return local;
 			}
-			int Invert(bool select) {
-				return select ? Set(value | invert) : Set(value & ~invert);
+			int Set(const int value) {
+				int temp = local;
+				local = value;
+				return temp;
 			}
-			int Border(bool select) {
-				return select ? Set(value | border) : Set(value & ~border);
+			bool Focus(const bool select) {
+				return Bool(select, focus);
+			}
+			bool Invert(const bool select) {
+				return Bool(select, invert);
+			}
+			bool Border(const bool select) {
+				return Bool(select, border);
 			}
 		private:
-			inline static int value;
+			bool Bool(const bool select, const int value) {
+				return (select ? Set(local | value) : Set(local & ~value)) & value;
+			}
+			int local = 0;
+			inline static int global = 0;
 		};
 	}
 	namespace shader {
@@ -133,7 +140,16 @@ namespace graphic {
 		struct Shader :
 			Base,
 			Uniform<Base>...
-		{};
+		{
+			void Bind() const;
+		};
+		template<class Base, template<class> class... Uniform>
+		void Shader<Base, Uniform...>::Bind() const {
+			glUseProgram(Shader::shader);
+			(std::invoke([&]() {
+				Uniform<Base>::Bind();
+				}), ...);
+		}
 	}
 }
 namespace graphic::shader::id {

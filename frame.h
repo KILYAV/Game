@@ -1,6 +1,6 @@
 #pragma once
 #include <Windows.h>
-#include <variant>
+#include <optional>
 #include "../glm/glm/glm.hpp"
 #include "../glad/include/glad/glad.h"
 #include "../glfw/include/GLFW/glfw3.h"
@@ -18,31 +18,37 @@ namespace window {
 		} const size;
 	private:
 		GLFWwindow* window;
-		inline static void (*CallBack)(void*, std::variant<glm::ivec2, std::tuple<int,int,int>>);
+		inline static void (*CallPaint)(void*);
+		inline static bool (*CallBack)(void*, glm::ivec2, std::optional<std::tuple<int,int,int>>);
 		static void CursorPosCallBack(GLFWwindow* window, double xpos, double ypos);
 		static void MouseCallBack(GLFWwindow* window, int button, int action, int mods);
 		Window();
 		Window(GLFWmonitor* const monitor);
 	public:
-		static Window frm;
-
 		Window(Window&&) = delete;
 		Window(const Window&) = delete;
 		~Window();
 
 		template<class Object>
 		Window& operator<< (Object& object);
+
+		static Window frm;
 	};
 	template<class Object>
 	Window& Window::operator<< (Object& object) {
 		glfwSetWindowUserPointer(window, &object);
 		CallBack = &object.CallBack;
+		CallPaint = &object.CallPaint;
+
+		double xpos, ypos;
+		glfwGetCursorPos(window, &xpos, &ypos);
+		//CallBack(&object, { xpos, ypos }, std::nullopt);
+		CallPaint(&object);
+		glfwSwapBuffers(window);
 
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0)) {
 			DispatchMessage(&msg);
-			object.Draw();
-			glfwSwapBuffers(window);
 		}
 		return *this;
 	}
