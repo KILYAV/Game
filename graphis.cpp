@@ -118,10 +118,10 @@ namespace graphic {
 				int U{ pos.y + ((size.y + 1) >> 1) };
 				int L{ R - size.x };
 				int D{ U - size.y };
-				return region = { U, R, D, L };
+				return { U, R, D, L };
 			}
-			std::array<glm::vec4, 2> Rectangle::GetPair(const std::pair<glm::ivec2, glm::ivec2> input) {
-				Region(input.first, input.second);
+			std::array<glm::vec4, 2> Rectangle::GetPair(const glm::ivec2 pos, const glm::ivec2 size) {
+				region = Region(pos, size);
 				return { GetBorder(Region()), GetRectangle(Region()) };
 			}
 			glm::vec4 Rectangle::GetBorder(const glm::ivec4 region) const {

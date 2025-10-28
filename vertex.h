@@ -23,7 +23,7 @@ namespace graphic {
 				using output_t = std::pair<std::pair<glm::vec4, glm::vec4>, std::array<glm::vec4, count>>;
 				template<size_t count>
 				output_t<count> Get(const input_t<count>& input);
-				std::array<glm::vec4, 2> GetPair(const std::pair<glm::ivec2, glm::ivec2> input);
+				std::array<glm::vec4, 2> GetPair(const glm::ivec2 pos, const glm::ivec2 size);
 			private:
 				glm::vec4 GetBorder(const glm::ivec4 region) const;
 				glm::vec4 GetRectangle(const glm::ivec4 region) const;
@@ -39,7 +39,7 @@ namespace graphic {
 				auto& border{ result.first.first };
 				auto& rectangle{ result.first.second };
 
-				Region(pos, size);
+				region = Region(pos, size);
 				border = GetBorder(Region());
 				rectangle = GetRectangle(Region());
 
@@ -72,7 +72,7 @@ namespace graphic {
 			using input_t = Shape::template input_t<sizeof...(Texture)>;
 		protected:
 			Array();
-			Array(const std::pair<glm::ivec2, glm::ivec2> input);
+			Array(const glm::ivec2 pos, const glm::ivec2 size);
 			Array(const input_t& input);
 		protected:
 			void LoadVertex(const input_t& input);
@@ -87,11 +87,11 @@ namespace graphic {
 			Shape{}
 		{}
 		template<class Shape, class... Texture>
-		Array<Shape, Texture...>::Array(const std::pair<glm::ivec2, glm::ivec2> input) :
+		Array<Shape, Texture...>::Array(const glm::ivec2 pos, glm::ivec2 size) :
 			base::Array{},
 			Shape{}
 		{
-			base::Array::LoadVertex(Shape::GetPair(input));
+			base::Array::LoadVertex(Shape::GetPair(pos, size));
 		}
 		template<class Shape, class... Texture>
 		Array<Shape, Texture...>::Array(const input_t& input) :

@@ -1,5 +1,6 @@
 #include "frame.h"
 #include "setting.h"
+#include <iostream>
 
 #define FULLSCREEN
 #undef FULLSCREEN
@@ -55,7 +56,7 @@ namespace window {
 	}
 	void Window::CursorPosCallBack(GLFWwindow* window, double xpos, double ypos) {
 		void* instant{ glfwGetWindowUserPointer(window) };
-		CallBack(instant, glm::ivec2{ xpos - frm.size.center.x, ypos - frm.size.center.y }, std::nullopt);
+		CallBack(instant, glm::ivec2{ frm.size.center.x - xpos, frm.size.center.y - ypos }, std::nullopt);
 		CallPaint(instant);
 		glfwSwapBuffers(window);
 	}
@@ -63,7 +64,7 @@ namespace window {
 		void* instant{ glfwGetWindowUserPointer(window) };
 		double xpos, ypos;
 		glfwGetCursorPos(window, &xpos, &ypos);
-		CallBack(instant, glm::ivec2{ xpos - frm.size.center.x, ypos - frm.size.center.y },
+		CallBack(instant, glm::ivec2{ frm.size.center.x - xpos, frm.size.center.y - ypos },
 			std::tuple{ button, action, mods });
 		CallPaint(instant);
 		glfwSwapBuffers(window);

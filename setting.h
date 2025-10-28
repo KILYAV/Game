@@ -2,14 +2,16 @@
 
 namespace setting {
 	class Setting {
-	private:
-		//bool full_screen = false;
+	public:
+		struct Scale {
+			float menu = 1.5;
+			float button = 1.0;
+		} const scale;
 	public:
 		struct Font {
 			unsigned ID;
 			unsigned height;
-		};
-		const Font font;
+		} const font;
 	public:
 		Setting(Setting&&) = delete;
 		Setting(const Setting&) = delete;

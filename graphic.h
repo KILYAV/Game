@@ -20,20 +20,19 @@ namespace graphic {
 		{
 		public:
 			using input_t = Vertex<Texture...>::input_t;
-			void ThisCallPaint();
-			bool ThisCallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse);
+			void Paint();
 		protected:
-			template<typename Input_t>
-			Object(Input_t input) :
+			template<typename... Input_t>
+			Object(Input_t... input) :
 				Shader{},
-				Vertex<Texture...>{ input },
+				Vertex<Texture...>{ input... },
 				Texture{}...
 			{
 				Shader::Invert(true);
 			}
 		};
 		template<class Shader, template<class> class Vertex, class... Texture>
-		void Object<Shader, Vertex, Texture...>::ThisCallPaint() {
+		void Object<Shader, Vertex, Texture...>::Paint() {
 			Shader::Bind();
 			Vertex<Texture...>::Bind();
 			texture::Bind<Texture...>();
@@ -43,18 +42,6 @@ namespace graphic {
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 			glBindVertexArray(0);
 		};
-		template<class Shader, template<class> class Vertex, class... Texture>
-		bool Object<Shader, Vertex, Texture...>::ThisCallBack(const glm::ivec2 pos,
-			std::optional<std::tuple<int, int, int>> mouse) {
-			if (Vertex<Texture...>::Region(pos)) {
-				Shader::Focus(true);
-				return true;
-			}
-			else {
-				Shader::Focus(false);
-				return false;
-			}
-		}
 
 		template<class... Texture>
 		using Rectangle = Object<shader::Rectangle, vertex::Rectangle, Texture...>;
@@ -65,71 +52,81 @@ namespace graphic {
 			using type = Value;
 			Value value;
 		};
-		template<template<size_t> class Layout, class... Value>
+		template<class... Value>
 		struct List :
 			Member<Value>...
 		{
-			using input_t = Layout<sizeof...(Value)>::input_t;
-			bool Region(const glm::ivec2 pos) const;
-			static bool CallBack(void* instant, const glm::ivec2 pos,
-				std::optional<std::tuple<int, int, int>> mouse) {
-				return static_cast<List<Layout, Value...>*>(instant)->ThisCallBack(pos, mouse);
-			}
-			static void CallPaint(void* instant) {
-				static_cast<List<Layout, Value...>*>(instant)->ThisCallPaint();
-			}
-			List(const input_t input) :
-				List{ input, 0 }
+			template<class Order, typename... Input_t>
+			List(const Order* order, const Input_t... input) :
+				List{ 0, order, input... }
 			{}
-		protected:
-			bool ThisCallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse);
-			void ThisCallPaint();
 		private:
-			List(const input_t input, int index) :
-				Member<Value>{ Layout<sizeof...(Value)>::Order(input, index) }...
+			template<typename Order, typename... Input_t>
+			List(int index, Order* order, Input_t... input) :
+				Member<Value>{ order->Order(index, input...) }...
 			{}
+		public:
+			void Paint();
+			bool Region(const glm::ivec2 pos);
+			bool CallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse);
 		};
-		template<template<size_t> class Layout, class... Value>
-		bool List<Layout, Value...>::Region(const glm::ivec2 pos) const {
+		template<class... Value>
+		void List<Value...>::Paint() {
+			(std::invoke([&]() {
+				static_cast<Member<Value>*>(this)->value.Paint();
+				}), ...);
+		}
+		template<class... Value>
+		bool List<Value...>::Region(const glm::ivec2 pos) {
 			bool result = false;
-			(std::invoke([]() {
+			(std::invoke([&]() {
 				result = result || static_cast<Member<Value>*>(this)->value.Region(pos);
 				}), ...);
 			return result;
 		}
-		template<template<size_t> class Layout, class... Value>
-		void List<Layout, Value...>::ThisCallPaint() {
-			(std::invoke([&]() {
-				static_cast<Member<Value>*>(this)->value.ThisCallPaint();
-				}), ...);
-		}
-		template<template<size_t> class Layout, class... Value>
-		bool List<Layout, Value...>::ThisCallBack(const glm::ivec2 pos,
+		template<class... Value>
+		bool List<Value...>::CallBack(const glm::ivec2 pos,
 			std::optional<std::tuple<int, int, int>> mouse) {
-			bool result = true;
+			bool result = false;
 			(std::invoke([&]() {
-				static_cast<Member<Value>*>(this)->value.ThisCallBack(pos, mouse);
+				result = result || static_cast<Member<Value>*>(this)->value.CallBack(pos, mouse);
 				}), ...);
 			return result;
 		}
-		namespace layout {
-			template<size_t count>
-			struct Vertical {
-				using input_t = std::pair<std::pair<int, std::array<int, count>>, glm::ivec2>;
-
-				static std::pair<glm::ivec2, glm::ivec2> Order(const input_t input, int& index) ;
-			};
-			template<size_t count>
-			std::pair<glm::ivec2, glm::ivec2> Vertical<count>::Order(const input_t input, int& index) {
-				auto& pos{ input.first };
-				auto& size{ input.second };
-				auto& X{ pos.first };
-				auto& Y{ pos.second };
-				glm::ivec2 result;
-				result.x = X;
-				result.y = Y[index++];
-				return { result, size };
+	}
+	namespace layout {
+		template<class... Unit>
+		struct Vertical {
+			glm::ivec2 UnitSize() const;
+			std::array<int, sizeof...(Unit)> UnitPos(
+				const glm::ivec2 size, const float scale) const;
+			std::pair<glm::ivec2, glm::ivec2> Order(int& index,
+				const std::array<int, sizeof...(Unit)>& pos, const glm::ivec2 size) const;
+		};
+		template<class... Unit>
+		glm::ivec2 Vertical<Unit...>::UnitSize() const {
+			glm::ivec2 size{ 0,0 };
+			(std::invoke([&]() {
+				size.x = size.x < Unit::texture.size.x ? Unit::texture.size.x : size.x;
+				size.y = size.y < Unit::texture.size.y ? Unit::texture.size.y : size.y;
+				}), ...);
+			return size;
+		}
+		template<class... Unit>
+		std::array<int, sizeof...(Unit)> Vertical<Unit...>::UnitPos(
+			const glm::ivec2 size, const float scale) const {
+			std::array<int, sizeof...(Unit)> pos;
+			float Y = size.y * scale;
+			float H = Y * sizeof...(Unit) * .5f;
+			for (int index = 0; index < sizeof...(Unit); ++index) {
+				pos[index] = H - Y * (.5f + index);
 			}
+			return pos;
+		}
+		template<class... Unit>
+		std::pair<glm::ivec2, glm::ivec2> Vertical<Unit...>::Order(int& index,
+			const std::array<int, sizeof...(Unit)>& pos, const glm::ivec2 size) const {
+			return { { 0, pos[index++] }, size};
 		}
 	}
 }

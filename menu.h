@@ -4,73 +4,57 @@
 #include "button.h"
 
 namespace menu {
-	template<class... Button>
+	auto& stt = setting::Setting::stt;
+	template<template<class> class Layout, class... Button>
 	struct Menu :
+		Layout<Button...>,
 		graphic::object::Rectangle<>,
-		graphic::list::List<graphic::list::layout::Vertical, Button...>
+		graphic::list::List<Button...>
 	{
 		using Rectangle = graphic::object::Rectangle<>;
-		using List = graphic::list::List<graphic::list::layout::Vertical, Button...>;
-		Menu();
+		using List = graphic::list::List<Button...>;
+		Menu(const glm::ivec2 pos = { 0, 0 }) :
+			Menu{ pos, Layout<Button...>::UnitSize() }
+		{}
+	private:
+		Menu(const glm::ivec2 pos, const glm::ivec2 size);
+	public:
 		static bool CallBack(void* instant, const glm::ivec2 pos,
 			std::optional<std::tuple<int, int, int>> mouse) {
-			return static_cast<Menu<Button...>*>(instant)->ThisCallBack(pos, mouse);
+			return static_cast<Menu*>(instant)->ThisCallBack(pos, mouse);
 		}
 		static void CallPaint(void* instant) {
-			static_cast<Menu<Button...>*>(instant)->ThisCallPaint();
+			static_cast<Menu*>(instant)->Paint();
 		}
 	protected:
 		bool ThisCallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse);
-		void ThisCallPaint() {
-			Rectangle::ThisCallPaint();
-			List::ThisCallPaint();
+		void Paint() {
+			Rectangle::Paint();
+			List::Paint();
 		}
-	private:
-		static constexpr float scale = 1.25;
-		Menu(const glm::ivec2 size);
-		Menu(const glm::ivec2 size,
-			const std::pair<int, std::array<int, sizeof...(Button)>> pos, int index = 0);
 	};
-	template<class... Button>
-	Menu<Button...>::Menu() :
-		Menu{ std::invoke([]() {
-			glm::ivec2 size{ 0,0 };
-			(std::invoke([&]() {
-				size.x = size.x < Button::texture.size.x ? Button::texture.size.x : size.x;
-				size.y = size.y < Button::texture.size.y ? Button::texture.size.y : size.y;
-				}), ...);
-			return glm::ivec2{ size.x * scale, size.y * scale };
-			}) }
-	{}
-	template<class... Button>
-	Menu<Button...>::Menu(const glm::ivec2 size) :
-		Menu{ size, std::invoke([&]() {
-			std::array<int, sizeof...(Button)> pos;
-			int step{ static_cast<int>(size.y * scale) };
-			int H{ static_cast<int>(step * .5 * (sizeof...(Button) - 1)) };
-			for (int index = 0; index < sizeof...(Button); ++index, H -= step) {
-				pos[index] = H;
-			}
-			return std::pair{ 0, pos };
-			}) }
-	{}
-	template<class... Button>
-	Menu<Button...>::Menu(const glm::ivec2 size,
-		const std::pair<int, std::array<int, sizeof...(Button)>> pos, int index) :
-		Rectangle{ std::invoke([&]() {
-			int W{ static_cast<int>(size.x + size.y * (scale - 1)) };
-			int H{ static_cast<int>(size.y * scale * pos.second.size()) };
-			return std::pair{ glm::ivec2{ 0, 0 }, glm::ivec2{ W, H } };
-			}) },
-		List{ std::pair{ pos, size } }
+	template<template<class> class Layout, class... Button>
+	Menu<Layout,Button...>::Menu(const glm::ivec2 pos, const glm::ivec2 size) :
+		Rectangle{ pos, glm::ivec2{
+			size.x + size.y * stt.scale.menu,
+			size.y * sizeof...(Button) * stt.scale.menu
+		} },
+		List{ static_cast<Layout<Button...>*>(this), Layout<Button...>::UnitPos(size, stt.scale.menu), size }
 	{
 		Rectangle::Border(true);
 	}
-	template<class... Button>
-	bool Menu<Button...>::ThisCallBack(const glm::ivec2 pos,
+
+	template<template<class> class Layout, class... Button>
+	bool Menu<Layout, Button...>::ThisCallBack(const glm::ivec2 pos,
 		std::optional<std::tuple<int, int, int>> mouse) {
-		if (List::ThisCallBack(pos, mouse))
-			return true;
+		if (Rectangle::Region(pos)) {
+			if (List::CallBack(pos, mouse))
+				Rectangle::Focus(false);
+			else
+				Rectangle::Focus(true);
+		}
+		else
+			return Rectangle::Focus(false);
 
 		/*
 		if (This->List::CallBack(This, pos, mouse)) {
@@ -85,5 +69,5 @@ namespace menu {
 		*/
 	}
 
-	using Main = Menu<button::Nothing, button::Exit>;
+	using Main = Menu<graphic::layout::Vertical, button::Nothing, button::Exit>;
 }

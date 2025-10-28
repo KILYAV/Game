@@ -129,7 +129,8 @@ namespace graphic {
 			}
 		private:
 			bool Bool(const bool select, const int value) {
-				return (select ? Set(local | value) : Set(local & ~value)) & value;
+				select ? Set(local | value) : Set(local & ~value);
+				return select;
 			}
 			int local = 0;
 			inline static int global = 0;

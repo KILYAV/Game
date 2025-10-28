@@ -5,41 +5,52 @@
 #include "graphic.h"
 
 namespace function {
-	void Nothing() {
-		;
+	void Nothing(int action) {
+		std::cout << action << "\n";
 	}
-	void Exit() {
+	void Exit(int) {
 		PostQuitMessage(0);
 	}
 }
 namespace button {
-	template<void (*Function)(), class Texture>
+	auto& stt = setting::Setting::stt;
+	template<void (*Function)(int), class Texture>
 	struct Button :
 		Texture,
 		graphic::object::Rectangle<Texture>
 	{
 		using Rectangle = graphic::object::Rectangle<Texture>;
+		using Rectangle::Paint;
+
 		Button(const std::pair<glm::ivec2, glm::ivec2> input);
 		bool CallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse) {
-			return Rectangle::CallBack(pos, mouse);
+			if (Rectangle::Region(pos)) {
+				if (mouse) {
+					auto tuple{ mouse.value() };
+					int button{ std::get<0>(tuple) };
+					int action{ std::get<1>(tuple) };
+					int mods{ std::get<2>(tuple) };
+					if (GLFW_MOUSE_BUTTON_LEFT == button && GLFW_PRESS == action)
+						Function(action);
+				}
+				return Rectangle::Focus(true);
+			}
+			else {
+				return Rectangle::Focus(false);
+			}
 		}
-		static bool CallBack(void* instant, const glm::ivec2 pos,
-			std::optional<std::tuple<int, int, int>> mouse) {
-			return static_cast<Button<Function, Texture>*>(instant)->CallBack(pos, mouse);
-		}
-		static void CallPaint(void* instant);
 	};
-	template<void (*Function)(), class Texture>
+	template<void (*Function)(int), class Texture>
 	Button<Function, Texture>::Button(const std::pair<glm::ivec2, glm::ivec2> input) :
 		Texture{},
-		Rectangle{ std::pair{ input, std::array<glm::ivec2, 2>{ glm::ivec2{}, Texture::texture.size } } }
+		Rectangle{ std::pair{ std::invoke([&](const glm::ivec2 pos, const glm::ivec2 size) {
+			int X = size.x + size.y * stt.scale.button;
+			int Y = size.y * stt.scale.button;
+			return std::pair{ pos, glm::ivec2{ X, Y } };
+			}, input.first, input.second),
+		std::array<glm::ivec2, 2>{ glm::ivec2{}, Texture::texture.size } } }
 	{
 		Rectangle::Border(true);
-	}
-	template<void (*Function)(), class Texture>
-	void Button<Function, Texture>::CallPaint(void* instant) {
-		auto This{ static_cast<Button<Function, Texture>*>(instant) };
-		This->Rectangle::CallPaint(static_cast<Rectangle*>(This));
 	}
 
 	namespace label {
