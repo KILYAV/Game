@@ -2,72 +2,54 @@
 #include <variant>
 #include <optional>
 #include "button.h"
+#include "layout.h"
+#include "function.h"
 
 namespace menu {
-	auto& stt = setting::Setting::stt;
-	template<template<class> class Layout, class... Button>
+	template<bool (*call_message)(int, int), template<class> class Layout, class... Unit>
 	struct Menu :
-		Layout<Button...>,
+		Layout<Unit...>,
 		graphic::object::Rectangle<>,
-		graphic::list::List<Button...>
+		graphic::list::List<Unit...>
 	{
 		using Rectangle = graphic::object::Rectangle<>;
-		using List = graphic::list::List<Button...>;
-		Menu(const glm::ivec2 pos = { 0, 0 }) :
-			Menu{ pos, Layout<Button...>::UnitSize() }
-		{}
-	private:
-		Menu(const glm::ivec2 pos, const glm::ivec2 size);
+		using List = graphic::list::List<Unit...>;
+		Menu(const glm::ivec2 pos = { 0, 0 }, const glm::ivec2 size = Size());
 	public:
-		static bool CallBack(void* instant, const glm::ivec2 pos,
-			std::optional<std::tuple<int, int, int>> mouse) {
-			return static_cast<Menu*>(instant)->ThisCallBack(pos, mouse);
-		}
-		static void CallPaint(void* instant) {
-			static_cast<Menu*>(instant)->Paint();
-		}
-	protected:
-		bool ThisCallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse);
+		void CallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse);
 		void Paint() {
 			Rectangle::Paint();
 			List::Paint();
 		}
+		bool CallMessage(int lParam, int wParam) {
+			return (*call_message)(lParam, wParam);
+		}
+		static glm::ivec2 Step() {
+			return graphic::layout::MaxSize<Unit...>();
+		}
+		static glm::ivec2 Size() {
+			return Layout<Unit...>::Size(Step());
+		}
 	};
-	template<template<class> class Layout, class... Button>
-	Menu<Layout,Button...>::Menu(const glm::ivec2 pos, const glm::ivec2 size) :
-		Rectangle{ pos, glm::ivec2{
-			size.x + size.y * stt.scale.menu,
-			size.y * sizeof...(Button) * stt.scale.menu
-		} },
-		List{ static_cast<Layout<Button...>*>(this), Layout<Button...>::UnitPos(size, stt.scale.menu), size }
+	template<bool (*call_messang)(int, int), template<class> class Layout, class... Unit>
+	Menu<call_messang, Layout, Unit...>::Menu(const glm::ivec2 pos, const glm::ivec2 size) :
+		Rectangle{ pos, size },
+		List{ static_cast<Layout<Unit...>*>(this), pos, Step(), graphic::layout::MaxSize<Unit...>() }
 	{
 		Rectangle::Border(true);
 	}
-
-	template<template<class> class Layout, class... Button>
-	bool Menu<Layout, Button...>::ThisCallBack(const glm::ivec2 pos,
+	template<bool (*call_messang)(int, int), template<class> class Layout, class... Unit>
+	void Menu<call_messang, Layout, Unit...>::CallBack(const glm::ivec2 pos,
 		std::optional<std::tuple<int, int, int>> mouse) {
-		if (Rectangle::Region(pos)) {
-			if (List::CallBack(pos, mouse))
-				Rectangle::Focus(false);
-			else
-				Rectangle::Focus(true);
-		}
-		else
-			return Rectangle::Focus(false);
-
-		/*
-		if (This->List::CallBack(This, pos, mouse)) {
-			This->Rectangle::Focus(false);
-			return true;
-		}
-		else if (This->Rectangle::CallBack(This, pos, mouse)) {
-			return true;
-		}
-		else
-			return false;
-		*/
+		List::CallBack(pos, mouse);
 	}
 
-	using Main = Menu<graphic::layout::Vertical, button::Nothing, button::Exit>;
+	using Main = Menu<function::main::Message, graphic::layout::Vertical,
+		button::main::Setting, button::main::Exit>;
+	using CancelApply = Menu<function::cancel_apply::CancelApply, graphic::layout::Horison,
+		button::cancel_apply::Cancel, button::cancel_apply::Apply>;
+	using Graphic = Menu<function::setting::graphic::Graphic, graphic::layout::Vertical,
+		button::setting::FullScreen>;
+	using Setting = Menu<function::setting::Setting, graphic::layout::Vertical,
+		Graphic, CancelApply>;
 }

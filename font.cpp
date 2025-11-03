@@ -6,9 +6,6 @@
 #include FT_FREETYPE_H
 
 namespace font {
-	auto& stt = setting::Setting::stt;
-	auto& frm = window::Window::frm;
-
 	Glyph::Glyph(const Glyph& glyph) :
 		bitmap::BitMap<bitmap::Red>{ static_cast<const bitmap::BitMap<bitmap::Red>&>(glyph) },
 		pos{ glyph.pos },
@@ -27,30 +24,39 @@ namespace font {
 	constexpr unsigned default_dpi = 72;
 	Face::Face(const FT_Face face, const unsigned new_height) :
 		std::map<unsigned, Glyph>{},
-		height{ (face->bbox.yMax - face->bbox.yMin) * new_height * frm.size.dpi.y / face->units_per_EM / default_dpi },
-		under{ face->bbox.yMax * new_height * frm.size.dpi.y / face->units_per_EM / default_dpi }
+		height{ (face->bbox.yMax - face->bbox.yMin) * new_height * frame::Frame::frm.Size().dpi.y
+			/ face->units_per_EM / default_dpi },
+		under{ face->bbox.yMax * new_height * frame::Frame::frm.Size().dpi.y / face->units_per_EM / default_dpi }
 	{}
 
-	Font::Font() {
-		FT_Init_FreeType(&library);
-		auto resource = FindResource(NULL, MAKEINTRESOURCE(stt.font.ID), RT_FONT);
+	Font::Font() :
+		library{ std::invoke([&]() {
+			FT_Library library;
+			FT_Init_FreeType(&library);
+			return library;
+			})}
+	{
+		auto resource = FindResource(NULL, MAKEINTRESOURCE(setting::Setting::stt.Font().ID), RT_FONT);
 		auto data{ LockResource(LoadResource(NULL, resource)) };
 		auto size{ SizeofResource(NULL, resource) };
 		FT_New_Memory_Face(library, static_cast<const unsigned char*>(data), size, 0, &face);
-		FT_Set_Char_Size(face, 0, stt.font.height << 6, frm.size.dpi.x, frm.size.dpi.y);
-		glyphs = this->emplace(stt.font.height, Face{ face, stt.font.height }).first;
+		FT_Set_Char_Size(face, 0, setting::Setting::stt.Font().height << 6,
+			frame::Frame::frm.Size().dpi.x, frame::Frame::frm.Size().dpi.y);
+		glyphs = this->emplace(setting::Setting::stt.Font().height,
+			Face{ face, setting::Setting::stt.Font().height }).first;
 	}
 	Font::~Font() {
 		FT_Done_Face(face);
 		FT_Done_FreeType(library);
 	}
+	unsigned Font::Height() {
+		return glyphs->second.height;
+	}
 	unsigned Font::Height(const unsigned height) {
-		if (NULL == height)
-			return glyphs->second.height;
 		if (false == this->contains(height)) {
 			this->emplace(height, Face{ face, height } );
 		}
-		FT_Set_Char_Size(face, 0, height, frm.size.dpi.x, frm.size.dpi.y);
+		FT_Set_Char_Size(face, 0, height, frame::Frame::frm.Size().dpi.x, frame::Frame::frm.Size().dpi.y);
 		return height;
 	}
 	glm::ivec2 Font::Size(const std::wstring& text) {

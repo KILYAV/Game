@@ -1,62 +1,81 @@
 #pragma once
 #include <variant>
 #include <optional>
+#include "setting.h"
 #include "frame.h"
+#include "font.h"
 #include "graphic.h"
+#include "function.h"
 
-namespace function {
-	void Nothing(int action) {
-		std::cout << action << "\n";
-	}
-	void Exit(int) {
-		PostQuitMessage(0);
-	}
-}
 namespace button {
-	auto& stt = setting::Setting::stt;
-	template<void (*Function)(int), class Texture>
+	template<int wParam, int lParam, class Texture>
 	struct Button :
 		Texture,
 		graphic::object::Rectangle<Texture>
 	{
 		using Rectangle = graphic::object::Rectangle<Texture>;
-		using Rectangle::Paint;
 
-		Button(const std::pair<glm::ivec2, glm::ivec2> input);
-		bool CallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse) {
-			if (Rectangle::Region(pos)) {
-				if (mouse) {
-					auto tuple{ mouse.value() };
-					int button{ std::get<0>(tuple) };
-					int action{ std::get<1>(tuple) };
-					int mods{ std::get<2>(tuple) };
-					if (GLFW_MOUSE_BUTTON_LEFT == button && GLFW_PRESS == action)
-						Function(action);
-				}
-				return Rectangle::Focus(true);
-			}
-			else {
-				return Rectangle::Focus(false);
-			}
-		}
+		Button(const glm::ivec2 pos = { 0, 0 }, const glm::ivec2 size = Size());
+		void CallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse);
+		static glm::ivec2 Size();
 	};
-	template<void (*Function)(int), class Texture>
-	Button<Function, Texture>::Button(const std::pair<glm::ivec2, glm::ivec2> input) :
+	template<int wParam, int lParam, class Texture>
+	Button<wParam, lParam, Texture>::Button(const glm::ivec2 pos, const glm::ivec2 size) :
 		Texture{},
-		Rectangle{ std::pair{ std::invoke([&](const glm::ivec2 pos, const glm::ivec2 size) {
-			int X = size.x + size.y * stt.scale.button;
-			int Y = size.y * stt.scale.button;
-			return std::pair{ pos, glm::ivec2{ X, Y } };
-			}, input.first, input.second),
-		std::array<glm::ivec2, 2>{ glm::ivec2{}, Texture::texture.size } } }
+		Rectangle{ pos, std::invoke([&]() {
+			int Y = size.y / 1.5 * 1.25;
+			int X = size.y - Y;
+			return glm::ivec2{ size.x - X, Y };
+			}), std::pair{glm::ivec2{}, Texture::texture.size} }
 	{
 		Rectangle::Border(true);
+	}
+	template<int wParam, int lParam, class Texture>
+	void Button<wParam, lParam, Texture>::CallBack(
+		const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse) {
+		if (Rectangle::Region(pos)) {
+			Rectangle::Focus(true);
+			if (mouse) {
+				auto tuple{ mouse.value() };
+				int button{ std::get<0>(tuple) };
+				int action{ std::get<1>(tuple) };
+				int mods{ std::get<2>(tuple) };
+				if (GLFW_MOUSE_BUTTON_LEFT == button && GLFW_PRESS == action) {
+					PostMessage(NULL, WM_USER, wParam, lParam);
+				}
+			}
+		}
+		else {
+			Rectangle::Focus(false);
+		}
+	};
+	template<int wParam, int lParam, class Texture>
+	glm::ivec2 Button<wParam, lParam, Texture>::Size() {
+		glm::ivec2 size { Texture::texture.size };
+		return { size.x + size.y, size.y * 1.5 };
 	}
 
 	namespace label {
 		static constexpr wchar_t exit[] = L"EXIT";
-		static constexpr wchar_t nothing[] = L"NOTHING";
+		static constexpr wchar_t apply[] = L"APPLY";
+		static constexpr wchar_t cancel[] = L"CANCEL";
+		static constexpr wchar_t setting[] = L"SETTING";
+		static constexpr wchar_t full_screen[] = L"FULLSCREEN";
 	}
-	using Exit = Button<function::Exit, graphic::texture::str::Texture<label::exit>>;
-	using Nothing = Button<function::Nothing, graphic::texture::str::Texture<label::nothing>>;
+	namespace main {
+		using Exit = Button<UM_MENU_MAIN, UM_BUTTON_EXIT,
+			graphic::texture::str::Texture<label::exit>>;
+		using Setting = Button<UM_MENU_MAIN, UM_BUTTON_SETTING,
+			graphic::texture::str::Texture<label::setting>>;
+	}
+	namespace cancel_apply {
+		using Apply = Button<UM_MENU_CANCEL_APPLY, UM_BUTTON_CANCEL,
+			graphic::texture::str::Texture<label::apply>>;
+		using Cancel = Button<UM_MENU_CANCEL_APPLY, UM_BUTTON_CANCEL,
+			graphic::texture::str::Texture<label::cancel>>;
+	}
+	namespace setting {
+		using FullScreen = Button<UM_MENU_SETTING, UM_BUTTON_FULLSCREEN,
+			graphic::texture::str::Texture<label::full_screen>>;
+	}
 }

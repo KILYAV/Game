@@ -9,7 +9,7 @@
 #include "stb_image.h"
 
 namespace graphic {
-	auto& frm = window::Window::frm;
+	auto& frm = frame::Frame::frm;
 
 	namespace shader {
 		unsigned CompileShader(const char* str, const int glsl, const int GL_XXXX_SHADER) {
@@ -109,75 +109,43 @@ namespace graphic {
 		}
 	}
 	namespace shape {
-		namespace rectangle {
-			bool Rectangle::Region(const glm::ivec2 pos) const {
-				return pos.x >= region.w && pos.x < region.y && pos.y >= region.z && pos.y < region.x;
-			}
-			glm::ivec4 Rectangle::Region(const glm::ivec2 pos, const glm::ivec2 size) {
-				int R{ pos.x + ((size.x + 1) >> 1) };
-				int U{ pos.y + ((size.y + 1) >> 1) };
-				int L{ R - size.x };
-				int D{ U - size.y };
-				return { U, R, D, L };
-			}
-			std::array<glm::vec4, 2> Rectangle::GetPair(const glm::ivec2 pos, const glm::ivec2 size) {
-				region = Region(pos, size);
-				return { GetBorder(Region()), GetRectangle(Region()) };
-			}
-			glm::vec4 Rectangle::GetBorder(const glm::ivec4 region) const {
-				float U{ static_cast<float>(region.x + frm.size.center.y) };
-				float R{ static_cast<float>(region.y + frm.size.center.x) };
-				float D{ static_cast<float>(region.z + frm.size.center.y) };
-				float L{ static_cast<float>(region.w + frm.size.center.x) };
-				return { U, R, D, L };
-			}
-			glm::vec4 Rectangle::GetRectangle(const glm::ivec4 region) const {
-				float U{ region.x * frm.size.pixel.y * 2 };
-				float R{ region.y * frm.size.pixel.x * 2 };
-				float D{ region.z * frm.size.pixel.y * 2 };
-				float L{ region.w * frm.size.pixel.x * 2 };
-				return { U, R, D, L };
-			}
-			glm::vec4 Rectangle::GetTexture(const glm::ivec2 pos, const glm::ivec2 texture,
-				const glm::ivec2 rectangle) const {
-				float X{ pos.x * frm.size.pixel.x };
-				float Y{ pos.y * frm.size.pixel.y };
-				float W{ rectangle.x * .5f / texture.x };
-				float H{ rectangle.y * .5f / texture.y };
-				return { .5f + H + Y, .5f + W + X, .5f - H + Y, .5f - W + X };
-			}
+		bool Rectangle::Region(const glm::ivec2 pos) const {
+			return pos.x >= region.w && pos.x < region.y && pos.y >= region.z && pos.y < region.x;
+		}
+		glm::ivec4 Rectangle::Region(const glm::ivec2 pos, const glm::ivec2 size) {
+			int R{ pos.x + ((size.x + 1) >> 1) };
+			int U{ pos.y + ((size.y + 1) >> 1) };
+			int L{ R - size.x };
+			int D{ U - size.y };
+			return { U, R, D, L };
+		}
+		glm::vec4 Rectangle::GetBorder(const glm::ivec4 region) const {
+			auto& center{ frame::Frame::frm.Size().center };
+			float U{ static_cast<float>(region.x + center.y) };
+			float R{ static_cast<float>(region.y + center.x) };
+			float D{ static_cast<float>(region.z + center.y) };
+			float L{ static_cast<float>(region.w + center.x) };
+			return { U, R, D, L };
+		}
+		glm::vec4 Rectangle::GetRectangle(const glm::ivec4 region) const {
+			auto& pixel{ frame::Frame::frm.Size().pixel };
+			float U{ region.x * pixel.y * 2 };
+			float R{ region.y * pixel.x * 2 };
+			float D{ region.z * pixel.y * 2 };
+			float L{ region.w * pixel.x * 2 };
+			return { U, R, D, L };
+		}
+		glm::vec4 Rectangle::GetTexture(const glm::ivec2 pos, const glm::ivec2 texture,
+			const glm::ivec2 rectangle) const {
+			auto& pixel{ frame::Frame::frm.Size().pixel };
+			float X{ pos.x * pixel.x };
+			float Y{ pos.y * pixel.y };
+			float W{ rectangle.x * .5f / texture.x };
+			float H{ rectangle.y * .5f / texture.y };
+			return { .5f + H + Y, .5f + W + X, .5f - H + Y, .5f - W + X };
 		}
 	}
 	namespace vertex {
-		namespace base {
-			Array::Array() :
-				VAO{ std::invoke([]() {
-					unsigned VAO;
-					glGenVertexArrays(1, &VAO);
-					return VAO;
-				}) },
-				VBO{ std::invoke([]() {
-					unsigned VBO;
-					glGenBuffers(1, &VBO);
-					return VBO;
-				}) }
-			{}
-			void Array::LoadVertex(const std::array<glm::vec4, 2> input) {
-				glBindVertexArray(VAO);
-				glBindBuffer(GL_ARRAY_BUFFER, VBO);
-				glBufferData(GL_ARRAY_BUFFER, sizeof(std::array<glm::vec4, 2>), &input, GL_STATIC_DRAW);
-
-				glVertexAttribPointer(0, sizeof(glm::ivec4) / sizeof(float), GL_FLOAT, GL_FALSE,
-					sizeof(glm::ivec4), (void*)0);
-				glEnableVertexAttribArray(0);
-				glVertexAttribPointer(1, sizeof(glm::ivec4) / sizeof(float), GL_FLOAT, GL_FALSE,
-					sizeof(glm::ivec4), (void*)sizeof(glm::ivec4));
-				glEnableVertexAttribArray(1);
-
-				glBindBuffer(GL_ARRAY_BUFFER, 0);
-				glBindVertexArray(0);
-			}
-		}
 		Element::Element(const std::vector<unsigned>& indices) :
 			EBO{ std::invoke([]() {
 				unsigned EBO;
@@ -191,5 +159,8 @@ namespace graphic {
 				static_cast<const char*>(static_cast<const void*>(indices.data())), GL_STATIC_DRAW);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		}
+	}
+	namespace layout {
+
 	}
 }
