@@ -19,18 +19,22 @@ namespace frame {
 			glm::ivec2 dpi;
 		};
 	private:
+		GLFWmonitor* monitor;
 		Size_t size;
 		GLFWwindow* window;
 		void* instant;
 		void (Frame::*call_back)(glm::ivec2, std::optional<std::tuple<int,int,int>>);
 		void (Frame::*call_paint)();
+
+		Size_t GetSize();
+		GLFWwindow* GetWindow();
 	public:
 		const Size_t& Size() const {
 			return size;
 		}
+		void FullScreen();
 	private:
 		Frame();
-		Frame(GLFWmonitor* const monitor);
 		Frame(Frame&&) = delete;
 		Frame(const Frame&) = delete;
 		~Frame();
@@ -55,6 +59,9 @@ namespace frame {
 		call_paint = &Frame::CallPaint<Object>;
 
 		glClear(GL_COLOR_BUFFER_BIT);
+		glfwSwapBuffers(window);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glfwSwapBuffers(window);
 		object.Paint();
 		glfwSwapBuffers(window);
 
@@ -67,11 +74,6 @@ namespace frame {
 					break;
 			DispatchMessage(&msg);
 		}
-
-		glClear(GL_COLOR_BUFFER_BIT);
-		glfwSwapBuffers(window);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glfwSwapBuffers(window);
 
 		instant = nullptr;
 		call_back = nullptr;

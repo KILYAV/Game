@@ -4,16 +4,6 @@
 namespace graphic {
 	namespace layout {
 		template<class... Unit>
-		glm::ivec2 MaxSize() {
-			glm::ivec2 max{ 0,0 };
-			(std::invoke([&]() {
-				glm::ivec2 size{ Unit::Size() };
-				max.x = max.x < size.x ? size.x : max.x;
-				max.y = max.y < size.y ? size.y : max.y;
-				}), ...);
-			return max;
-		}
-		template<class... Unit>
 		struct Horison {
 			static glm::ivec2 Size(const glm::ivec2 step) {
 				return { step.x * sizeof...(Unit), step.y };
@@ -28,18 +18,17 @@ namespace graphic {
 			return { pos.x + X, pos.y };
 		}
 
-		template<class... Unit>
 		struct Vertical {
-			static glm::ivec2 Size(const glm::ivec2 step) {
-				return { step.x, step.y * sizeof...(Unit) };
+			static glm::ivec2 Size(const glm::ivec2 step, const int count) {
+				return { step.x, step.y * count };
 			}
-			glm::ivec2 Order(int& index, const glm::ivec2 pos, const glm::ivec2 size) const;
+			static glm::ivec2 Order(const glm::ivec2 pos, const glm::ivec2 size,
+				const int count, const int index);
 		};
-		template<class... Unit>
-		glm::ivec2 Vertical<Unit...>::Order(int& index,
-			const glm::ivec2 pos, const glm::ivec2 step) const {
-			float H = step.y * sizeof...(Unit) * .5f;
-			int Y = H - step.y * (.5f + index++);
+		inline glm::ivec2 Vertical::Order(const glm::ivec2 pos, const glm::ivec2 size,
+			const int count, const int index) {
+			float H = size.y * count * .5f;
+			int Y = H - size.y * (.5f + index);
 			return { pos.x, pos.y + Y };
 		}
 	}

@@ -83,12 +83,55 @@ namespace graphic {
 			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, align ? sizeof(bitmap::RGB): sizeof(bitmap::Red));
+			glPixelStorei(GL_UNPACK_ALIGNMENT, align ? sizeof(bitmap::RGB) : sizeof(bitmap::Red));
 			glBindTexture(GL_TEXTURE_2D, texture);
 			glTexImage2D(GL_TEXTURE_2D, 0, align ? GL_RGB : GL_RED, size.x, size.y, 0,
 				align ? GL_RGB : GL_RED, GL_UNSIGNED_BYTE, data);
 			return texture;
 		}
+		Texture::Texture(const std::vector<std::wstring> labels) :
+			texture{ std::invoke([&]() {
+				std::vector<Data> texture;
+				for (auto& label : labels) {
+					auto bitmap{ font::Font::fnt.GetBitMap(label) };
+					texture.emplace_back(
+						LoadTexture(bitmap.Data(), bitmap.GetSize(), false), bitmap.GetSize());
+				}
+				return texture;
+				}) }
+		{}
+		void Texture::AddTexture(const int ID) {
+			auto resource = FindResource(NULL, MAKEINTRESOURCE(ID), L"JPG");
+			auto source{ LockResource(LoadResource(NULL, resource)) };
+			auto size{ SizeofResource(NULL, resource) };
+			int width, height, channels;
+			stbi_set_flip_vertically_on_load(true);
+			unsigned char* data{ stbi_load_from_memory(static_cast<const unsigned char*>(source),
+					size, &width, &height, &channels, 0) };
+			texture.emplace_back(LoadTexture(data, glm::ivec2{ width, height }),
+				glm::ivec2{ 0,0 }, glm::ivec2{ width, height }, glm::ivec2{ 1,1 });
+		}
+		void Texture::AddTexture(const wchar_t* label) {
+			auto bitmap{ font::Font::fnt.GetBitMap(label) };
+			texture.emplace_back(LoadTexture(bitmap.Data(), bitmap.GetSize(), false),
+				glm::ivec2{ 0,0 }, bitmap.GetSize(), glm::ivec2{ 1,1 });
+		}
+		void Texture::Bind() const {
+			unsigned numb{ GL_TEXTURE0 };
+			for (auto& text : texture) {
+				glActiveTexture(numb++);
+				glBindTexture(GL_TEXTURE_2D, text.ID);
+			}
+		}
+		glm::ivec2 Texture::MaxSize() const {
+			glm::ivec2 max{ 0,0 };
+			for (auto& [ID,pos,size,scale] : texture) {
+				max.x = max.x < size.x ? size.x : max.x;
+				max.y = max.y < size.y ? size.y : max.y;
+			}
+			return max;
+		}
+
 		namespace id {
 			data::Texture GetTexture(const int ID) {
 				auto resource = FindResource(NULL, MAKEINTRESOURCE(ID), L"JPG");
@@ -112,14 +155,14 @@ namespace graphic {
 		bool Rectangle::Region(const glm::ivec2 pos) const {
 			return pos.x >= region.w && pos.x < region.y && pos.y >= region.z && pos.y < region.x;
 		}
-		glm::ivec4 Rectangle::Region(const glm::ivec2 pos, const glm::ivec2 size) {
+		glm::ivec4 Rectangle::SetRegion() {
 			int R{ pos.x + ((size.x + 1) >> 1) };
 			int U{ pos.y + ((size.y + 1) >> 1) };
 			int L{ R - size.x };
 			int D{ U - size.y };
-			return { U, R, D, L };
+			return region = { U, R, D, L };
 		}
-		glm::vec4 Rectangle::GetBorder(const glm::ivec4 region) const {
+		glm::vec4 Rectangle::GetBorder() const {
 			auto& center{ frame::Frame::frm.Size().center };
 			float U{ static_cast<float>(region.x + center.y) };
 			float R{ static_cast<float>(region.y + center.x) };
@@ -127,7 +170,7 @@ namespace graphic {
 			float L{ static_cast<float>(region.w + center.x) };
 			return { U, R, D, L };
 		}
-		glm::vec4 Rectangle::GetRectangle(const glm::ivec4 region) const {
+		glm::vec4 Rectangle::GetRectangle() const {
 			auto& pixel{ frame::Frame::frm.Size().pixel };
 			float U{ region.x * pixel.y * 2 };
 			float R{ region.y * pixel.x * 2 };
@@ -135,7 +178,15 @@ namespace graphic {
 			float L{ region.w * pixel.x * 2 };
 			return { U, R, D, L };
 		}
-		glm::vec4 Rectangle::GetTexture(const glm::ivec2 pos, const glm::ivec2 texture,
+		std::vector<glm::vec4> Rectangle::GetTexture(const std::vector<texture::Texture::Data> texture) const {
+			std::vector<glm::vec4> result;
+			result.resize(texture.size());
+			for (int index = 0, max = texture.size(); index < max; ++index) {
+				result[index] = GetVertex(texture[index].pos, texture[index].size, size);
+			};
+			return result;
+		}
+		glm::vec4 Rectangle::GetVertex(const glm::ivec2 pos, const glm::ivec2 texture,
 			const glm::ivec2 rectangle) const {
 			auto& pixel{ frame::Frame::frm.Size().pixel };
 			float X{ pos.x * pixel.x };
@@ -146,6 +197,7 @@ namespace graphic {
 		}
 	}
 	namespace vertex {
+		/*
 		Element::Element(const std::vector<unsigned>& indices) :
 			EBO{ std::invoke([]() {
 				unsigned EBO;
@@ -159,8 +211,6 @@ namespace graphic {
 				static_cast<const char*>(static_cast<const void*>(indices.data())), GL_STATIC_DRAW);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		}
-	}
-	namespace layout {
-
+		*/
 	}
 }

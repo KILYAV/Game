@@ -1,4 +1,7 @@
 #pragma once
+#include <vector>
+#include <memory>
+#include <type_traits>
 #include "frame.h"
 #include "texture.h"
 
@@ -6,43 +9,37 @@ namespace graphic {
 	namespace shape {
 		struct Rectangle {
 		private:
-			glm::ivec4 region;
+			glm::ivec2 pos{ 0,0 };
+			glm::ivec2 size{ 0,0 };
+			glm::ivec4 region{ 0,0,0,0 };
 		public:
-			static constexpr size_t size = 1;
+			static constexpr size_t count = 1;
 
 			bool Region(const glm::ivec2 pos) const;
-			glm::ivec4 Region(const glm::ivec2 pos, const glm::ivec2 size);
-			glm::ivec4 Region() const {
+			glm::ivec2 GetPos() const {
+				return pos;
+			}
+			glm::ivec2 SetPos(const glm::ivec2 pos) {
+				return this->pos = pos;
+			}
+			glm::ivec2 GetSize() const {
+				return size;
+			}
+			glm::ivec2 SetSize(const glm::ivec2 size) {
+				return this->size = size;
+			}
+			glm::ivec4 GetRegion() const {
 				return region;
 			}
+			glm::ivec4 SetRegion();
 
-			template<typename... Input_t>
-			std::array<glm::vec4, 2 + sizeof...(Input_t)> Get(const glm::ivec2 pos,
-				const glm::ivec2 size, const Input_t... input);
+			glm::vec4 GetBorder() const;
+			glm::vec4 GetRectangle() const;
+			std::vector<glm::vec4> GetTexture(const std::vector<texture::Texture::Data> texture) const;
 		private:
-			glm::vec4 GetBorder(const glm::ivec4 region) const;
-			glm::vec4 GetRectangle(const glm::ivec4 region) const;
-			glm::vec4 GetTexture(const glm::ivec2 pos, const glm::ivec2 size_tex,
+			glm::vec4 GetVertex(const glm::ivec2 pos, const glm::ivec2 size_tex,
 				const glm::ivec2 size_rect) const;
 		};
-		template<typename... Input_t>
-		std::array<glm::vec4, 2 + sizeof...(Input_t)> Rectangle::Get(const glm::ivec2 pos,
-			const glm::ivec2 size, const Input_t... input) {
-			std::array<glm::vec4, sizeof...(Input_t) + 2> array;
-
-			region = Region(pos, size);
-			auto border = GetBorder(Region());
-			auto rectangle = GetRectangle(Region());
-
-			int index = 0;
-			array[index++] = border;
-			array[index++] = rectangle;
-
-			(std::invoke([&](const auto pos, const auto texture, const auto rectangle) {
-				array[index++] = GetTexture(pos, texture, rectangle);
-				}, input.first, input.second, size), ...);
-			return array;
-		}
 	}
 	namespace vertex {
 		template<class Shape>
@@ -51,8 +48,8 @@ namespace graphic {
 		{
 			const unsigned VAO;
 			const unsigned VBO;
-		protected:
 			Array() :
+				Shape{},
 				VAO{ std::invoke([]() {
 					unsigned VAO;
 					glGenVertexArrays(1, &VAO);
@@ -64,41 +61,50 @@ namespace graphic {
 					return VBO;
 				}) }
 			{}
-			template<typename pos_t, typename size_t, typename... Input_t>
-			Array(const pos_t pos, const size_t size, const Input_t... input) :
-				Array{}
-			{
-				LoadVertex(pos, size, input...);
-			}
 			void Bind() const {
 				glBindVertexArray(VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, VBO);
 			}
-			template<typename pos_t, typename size_t, typename... Input_t>
-			void LoadVertex(const pos_t pos, const size_t size, const Input_t... input);
+			template<typename... Input_t>
+			void LoadVertex(const Input_t... input);
 		};
 		template<class Shape>
-		template<typename pos_t, typename size_t, typename... Input_t>
-		void Array<Shape>::LoadVertex(const pos_t pos, const size_t size, const Input_t... input) {
-			auto array{ Shape::Get(pos, size, input...) };
+		template<typename... Input_t>
+		void Array<Shape>::LoadVertex(const Input_t... input) {
+			int index = 0;
+			int count = 0;
+			int offset = 0;
+			int size[sizeof...(Input_t)];
+			(std::invoke([&]() {
+				if constexpr (std::is_trivial_v<Input_t>)
+					count += size[index++] = sizeof(Input_t);
+				else
+					count += size[index++] = input.size() * sizeof(Input_t::value_type);
+				}), ...);
 
 			glBindVertexArray(VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(array), &array, GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, count, NULL, GL_STATIC_DRAW);
 
-			for (unsigned index = 0, offset = 0, max = sizeof...(Input_t) + 2; index < max; ++index) {
-				glVertexAttribPointer(index, sizeof(glm::vec4) / sizeof(float),
-					GL_FLOAT, GL_FALSE, sizeof(glm::vec4), (void*)offset);
+			index = 0;
+			(std::invoke([&]() {
+				if constexpr (std::is_trivial_v<Input_t>)
+					glBufferSubData(GL_ARRAY_BUFFER, offset, size[index], &input);
+				else
+					glBufferSubData(GL_ARRAY_BUFFER, offset, size[index], input.data());
+
+				glVertexAttribPointer(index, size[index] / sizeof(float), GL_FLOAT,
+					GL_FALSE, size[index], (void*)offset);
 				glEnableVertexAttribArray(index);
-				offset += sizeof(glm::vec4);
-			}
+				offset += size[index++];
+				}), ...);
 
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 			glBindVertexArray(0);
 		}
 
 		using Rectangle = Array<shape::Rectangle>;
-
+		/*
 		class Element {
 		public:
 			const unsigned EBO;
@@ -109,5 +115,6 @@ namespace graphic {
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 			}
 		};
+		*/
 	}
 }

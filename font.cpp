@@ -14,9 +14,8 @@ namespace font {
 	Glyph::Glyph(const FT_GlyphSlot glyph) :
 		bitmap::BitMap<bitmap::Red>{
 			static_cast<bitmap::Red*>(static_cast<void*>(glyph->bitmap.buffer)),
-			glm::ivec2{ glyph->bitmap.width, glyph->bitmap.rows },
-			true
-	},
+			glm::ivec2{ glyph->bitmap.width, glyph->bitmap.rows }
+		},
 		pos{ glyph->bitmap_left, glyph->bitmap_top },
 		advance{ glyph->advance.x >> 6, glyph->advance.y >> 6 }
 	{}
@@ -81,6 +80,7 @@ namespace font {
 			bitmap.Insert(glyph, { length + glyph.pos.x, glyphs->second.under - glyph.pos.y });
 			length += glyph.advance.x;
 		}
+		bitmap.MirrorXX();
 		return bitmap;
 	}
 }

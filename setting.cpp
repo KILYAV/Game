@@ -17,7 +17,7 @@ namespace setting {
 		}) };
 
 	Setting::Setting()	:
-		frame{ false, glm::ivec2{ 640, 480 } },
+		Frame_t{},
 		font{ IDR_FONT1, 14 }
 	{
 		if (std::filesystem::exists(path)) {

@@ -12,38 +12,29 @@
 
 namespace graphic {
 	namespace object {
-		template<class Shader, class Vertex, class... Texture>
+		template<class Shader, class Vertex>
 		struct Object :
 			Shader,
 			Vertex,
-			Texture...
+			texture::Texture
 		{
 		public:
-			void Paint();
-		protected:
-			template<typename... Input_t>
-			Object(Input_t... input) :
-				Shader{},
-				Vertex{ input... },
-				Texture{}...
-			{
-				Shader::Invert(true);
-			}
+			void Paint() const;
+			Object() = default;
 		};
-		template<class Shader, class Vertex, class... Texture>
-		void Object<Shader, Vertex, Texture...>::Paint() {
+		template<class Shader, class Vertex>
+		void Object<Shader, Vertex>::Paint() const {
 			Shader::Bind();
 			Vertex::Bind();
-			texture::Bind<Texture...>();
+			texture::Texture::Bind();
 
-			glDrawArrays(GL_POINTS, 0, Vertex::size);
+			glDrawArrays(GL_POINTS, 0, Vertex::count);
 
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 			glBindVertexArray(0);
 		};
 
-		template<class... Texture>
-		using Rectangle = Object<shader::Rectangle, vertex::Rectangle, Texture...>;
+		using Rectangle = Object<shader::Rectangle, vertex::Rectangle>;
 	}
 	namespace list {
 		template<class Value>
@@ -60,6 +51,7 @@ namespace graphic {
 		struct List :
 			Member<Value>...
 		{
+			List() = default;
 			template<class Order, typename... Input_t>
 			List(const Order* order, const Input_t... input) :
 				List{ 0, order, input... }
