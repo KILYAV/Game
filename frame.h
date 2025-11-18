@@ -10,31 +10,58 @@
 namespace frame {
 	struct Frame {
 	public:
+		struct Modes_t {
+			const GLFWvidmode* const ptr;
+			const int count;
+		private:
+			int index = 0;
+		public:
+			Modes_t(const GLFWvidmode* const ptr_,
+				const int count_) :
+				ptr{ ptr_ },
+				count{ count_ }
+			{}
+			const GLFWvidmode& Get() const {
+				return ptr[index];
+			}
+			const GLFWvidmode& Back() const {
+				return ptr[count - 1];
+			}
+			int Up() {
+				return index = count == index + 1 ? 0 : ++index;
+			}
+		};
 		struct Size_t {
-			glm::vec2 pixel;
 			glm::vec2 floating;
+			glm::vec2 pixel;
 			glm::ivec2 integer;
-			glm::ivec2 physical;
 			glm::ivec2 center;
-			glm::ivec2 dpi;
 		};
 	private:
-		GLFWmonitor* monitor;
+		Modes_t modes;
 		Size_t size;
+	public:
+		const glm::vec2 dpi;
+	private:
 		GLFWwindow* window;
+		const unsigned uniform;
+
 		void* instant;
 		void (Frame::*call_back)(glm::ivec2, std::optional<std::tuple<int,int,int>>);
 		void (Frame::*call_paint)();
 
-		Size_t GetSize();
-		GLFWwindow* GetWindow();
+		Size_t ReSize(const glm::ivec2 physical);
 	public:
 		const Size_t& Size() const {
 			return size;
 		}
-		void FullScreen();
+		//void FullScreen();
 	private:
 		Frame();
+		Frame(GLFWmonitor* const monitor);
+		Frame(GLFWmonitor* const monitor, const Modes_t modes);
+		Frame(const Modes_t modes, const glm::ivec2 physical);
+		Frame(const Modes_t modes, const glm::ivec2 physical, const glm::vec2 dpi);
 		Frame(Frame&&) = delete;
 		Frame(const Frame&) = delete;
 		~Frame();
@@ -68,7 +95,6 @@ namespace frame {
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0))
 		{
-			std::cout << msg.message << "\n";
 			if (WM_USER == msg.message)
 				if (false == object.CallMessage(msg.wParam, msg.lParam))
 					break;

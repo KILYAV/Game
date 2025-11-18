@@ -1,45 +1,39 @@
-#version 420 core
+#version 460 core
 #define FOCUS  0x01
 #define INVERT 0x02
 #define BORDER 0x04
 #define EQ(status,member) (member == (status & member))
 
-layout (std140) uniform Button {
-	int button_status;
+layout (location = 0) in vec4 in_border;
+layout (location = 1) in vec2 in_texture;
+
+layout(std140, binding = 0) uniform frame {
+	vec2 size;
+	vec2 pixel;
+	ivec2 integer;
+	ivec2 center;
 };
 
 uniform int rectangle_status;
+
 uniform sampler2D texture_0;
-
-in vec4 geom_border;
-in vec2 geom_texture_0;
-
-void Texture() {
-	gl_FragColor = texture(texture_0, geom_texture_0);
-}
-void Invert(const int status) {
-	if (EQ(status,FOCUS) && EQ(status,INVERT))
-		gl_FragColor = vec4(1. - gl_FragColor.r, gl_FragColor.gba);
-}
-void Border(const int status) {
-	if (EQ(status,BORDER)) {
-		if (gl_FragCoord.x > (geom_border.w - 0.) && gl_FragCoord.x < (geom_border.w + 1.))
-			gl_FragColor = vec4(1 - gl_FragColor.x, gl_FragColor.yzw);
-		if (gl_FragCoord.x > (geom_border.y - 1.) && gl_FragCoord.x < (geom_border.y + 0.))
-			gl_FragColor = vec4(1 - gl_FragColor.x, gl_FragColor.yzw);
-		if (gl_FragCoord.y > (geom_border.x - 1.) && gl_FragCoord.y < (geom_border.x + 0.))
-			gl_FragColor = vec4(1 - gl_FragColor.x, gl_FragColor.yzw);
-		if (gl_FragCoord.y > (geom_border.z - 0.) && gl_FragCoord.y < (geom_border.z + 1.))
-			gl_FragColor = vec4(1 - gl_FragColor.x, gl_FragColor.yzw);
-	}
-}
 
 void main()
 {
-	int status  = rectangle_status | button_status;
+	int status = rectangle_status;
 
-	Texture();
-	Invert(status);
-	Border(status);
+	gl_FragColor = vec4(0.,0.,0.,0.);
+
+	if (EQ(status,BORDER)) {
+		if (gl_FragCoord.x > in_border.x || gl_FragCoord.x < in_border.z)
+			gl_FragColor.r = 1 - gl_FragColor.r;
+		if (gl_FragCoord.y > in_border.y || gl_FragCoord.y < in_border.w)
+			gl_FragColor.r = 1 - gl_FragColor.r;
+	}
+
+	gl_FragColor += texture(texture_0, in_texture);
+
+	if (EQ(status,FOCUS) && EQ(status,INVERT))
+		gl_FragColor.r = 1. - gl_FragColor.r;
 }
 

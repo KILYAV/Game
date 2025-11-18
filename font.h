@@ -30,11 +30,10 @@ namespace font {
 	class Font :
 		std::map<unsigned, Face>
 	{
-	public:
-		FT_Library const library;
 	private:
-		FT_Face face;
 		std::map<unsigned, Face>::iterator glyphs;
+		FT_Library const library;
+		FT_Face face;
 	private:
 		Font();
 		Font(Font&&) = delete;
@@ -48,6 +47,7 @@ namespace font {
 
 		static Font fnt;
 	};
+	glm::ivec2 MaxSize(const std::vector<std::wstring>& vector);
 #ifdef LEON_OPENGL_IMPLEMENTATION
 	Font Font::fnt;
 #endif

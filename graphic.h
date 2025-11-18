@@ -1,12 +1,7 @@
 #pragma once
-#include <tuple>
-#include <array>
-#include <vector>
-#include <functional>
 #include "../glm/glm/glm.hpp"
 #include "../glad/include/glad/glad.h"
 #include "../glfw/include/GLFW/glfw3.h"
-#include "resource.h"
 #include "shader.h"
 #include "vertex.h"
 
@@ -19,14 +14,22 @@ namespace graphic {
 			texture::Texture
 		{
 		public:
+			using Texture = texture::Texture;
+			Object() :
+				Shader{},
+				Vertex{},
+				Texture{}
+			{}
 			void Paint() const;
-			Object() = default;
+			void LoadVertex(const glm::ivec4 border, const glm::ivec4 texture = {0,0,0,0}) const {
+				Vertex::LoadVertex(border, texture);
+			}
 		};
 		template<class Shader, class Vertex>
 		void Object<Shader, Vertex>::Paint() const {
 			Shader::Bind();
 			Vertex::Bind();
-			texture::Texture::Bind();
+			Texture::Bind();
 
 			glDrawArrays(GL_POINTS, 0, Vertex::count);
 
@@ -36,56 +39,20 @@ namespace graphic {
 
 		using Rectangle = Object<shader::Rectangle, vertex::Rectangle>;
 	}
-	namespace list {
-		template<class Value>
-		struct Member {
-			using type = Value;
-			Value value;
-
-			template<typename... Input_t>
-			Member(Input_t... input_t) :
-				value{ input_t... }
-			{}
-		};
-		template<class... Value>
-		struct List :
-			Member<Value>...
-		{
-			List() = default;
-			template<class Order, typename... Input_t>
-			List(const Order* order, const Input_t... input) :
-				List{ 0, order, input... }
-			{}
+	namespace layout {
+		struct Layout {
 		private:
-			template<class Order, typename pos_t, typename step_t, typename size_t>
-			List(int index, Order* order, const pos_t pos, const step_t step, const size_t size) :
-				Member<Value>{ order->Order(index, pos, step), size }...
-			{}
+			bool select = true;
 		public:
-			void Paint();
-			void CallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse);
-			bool Region(const glm::ivec2 pos);
+			bool SetHorizon() {
+				select = true;
+			}
+			bool SetVertical() {
+				select = false;
+			}
+			glm::ivec2 GetSize(const glm::ivec2 step, const int count) const;
+			glm::ivec2 GetPos(const glm::ivec2 pos, const glm::ivec2 size,
+				const int count, const int index) const;
 		};
-		template<class... Value>
-		void List<Value...>::Paint() {
-			(std::invoke([&]() {
-				static_cast<Member<Value>*>(this)->value.Paint();
-				}), ...);
-		}
-		template<class... Value>
-		bool List<Value...>::Region(const glm::ivec2 pos) {
-			bool result = false;
-			(std::invoke([&]() {
-				result = result || static_cast<Member<Value>*>(this)->value.Region(pos);
-				}), ...);
-			return result;
-		}
-		template<class... Value>
-		void List<Value...>::CallBack(const glm::ivec2 pos,
-			std::optional<std::tuple<int, int, int>> mouse) {
-			(std::invoke([&]() {
-				static_cast<Member<Value>*>(this)->value.CallBack(pos, mouse);
-				}), ...);
-		}
 	}
 }

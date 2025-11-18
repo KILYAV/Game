@@ -5,41 +5,46 @@
 
 namespace bitmap {
 	struct Red {
-		unsigned char r;
+		unsigned char r = 0;
 		inline static constexpr unsigned GL_XXX = GL_RED;
 	};
 	struct RGB :
 		Red
 	{
-		unsigned char g;
-		unsigned char b;
+		unsigned char g = 0;
+		unsigned char b = 0;
 		inline static constexpr unsigned GL_XXX = GL_RGB;
 	};
 	struct RGBA :
 		RGB
 	{
-		unsigned char a;
+		unsigned char a = 0;
 		inline static constexpr unsigned GL_XXX = GL_RGBA;
 	};
 	template<typename Pixel>
-	class BitMap :
-		std::unique_ptr<Pixel[]>
-	{
+	class BitMap {
 	private:
+		std::unique_ptr<Pixel[]> ptr;
 		glm::ivec2 size;
 	public:
-		using std::unique_ptr<Pixel[]>::operator bool;
+		operator bool() {
+			return static_cast<bool>(ptr);
+		}
 		BitMap() = default;
 		BitMap(BitMap&& bitmap);
 		BitMap(const BitMap& bitmap);
-		BitMap(const Pixel* data, const glm::ivec2 size, bool mirror = false);
-		void operator= (const BitMap& other);
+		BitMap(const glm::ivec2 size, const Pixel pixel = Pixel{});
+		BitMap(const glm::ivec2 size, const Pixel* data);
 
-		BitMap& SetSize(const glm::ivec2 size);
+		BitMap& operator= (BitMap&& other);
+		BitMap& operator= (const BitMap& other);
+
+		BitMap& operator+ (const BitMap& other);
+
+		BitMap& SetSize(const glm::ivec2 size, const glm::ivec2 pos = { 0,0 }, const Pixel pixel = Pixel{});
 		BitMap& SetPixel(const glm::ivec2 pos, const Pixel pixel);
-		BitMap& Insert(const BitMap& other, const glm::ivec2 pos);
+		BitMap& Insert(const BitMap& other, const glm::ivec2 pos = { 0,0 });
 		BitMap& Fill(const Pixel pixel);
-		BitMap& Border(const Pixel pixel);
 		BitMap& MirrorXX();
 		bool Empty() const {
 			return size == glm::ivec2{ 0, 0 };
@@ -51,42 +56,16 @@ namespace bitmap {
 		const unsigned GL_XXX() const {
 			return Pixel::GL_XXX;
 		}
-		unsigned char* Data() {
-			return const_cast<unsigned char*>(static_cast<const BitMap*>(this)->Data());
-		}
-		const unsigned char* Data() const {
-			return static_cast<const unsigned char*>(static_cast<const void*>(this->get()));
+		const void* Data() const {
+			return static_cast<const void*>(ptr.get());
 		}
 		const glm::ivec2 GetSize() const {
 			return size;
 		}
-	private:
-		std::unique_ptr<Pixel[]> Data(const Pixel* data, const glm::ivec2 size, bool mirror);
 	};
 	template<typename Pixel>
-	std::unique_ptr<Pixel[]> BitMap<Pixel>::Data(const Pixel* data, const glm::ivec2 size, bool mirror) {
-		int count = size.x * size.y;
-		if (count) {
-			Pixel* bitmap{ new Pixel[count]{0} };
-			if (data) {
-				if (mirror) {
-					for (unsigned x = 0, max_X = size.x * sizeof(Pixel); x < max_X; ++x)
-						for (unsigned y = 0, max_Y = count * sizeof(Pixel); y < max_Y; y += max_X)
-							bitmap[x + y] = data[x + (max_Y - max_X - y)];
-				}
-				else
-					for (unsigned index = 0; index < count; ++index) {
-						bitmap[index] = data[index];
-					}
-			}
-			return std::unique_ptr<Pixel[]>{ bitmap };
-		}
-		else
-			return std::unique_ptr<Pixel[]>{};
-	}
-	template<typename Pixel>
 	BitMap<Pixel>::BitMap(BitMap&& bitmap) :
-		std::unique_ptr<Pixel[]>{ std::move(static_cast<std::unique_ptr<Pixel[]>&>(bitmap)) },
+		ptr{ bitmap.ptr.release() },
 		size{ std::invoke([&]() {
 			auto temp = bitmap.size;
 			bitmap.size = { 0, 0 };
@@ -95,28 +74,50 @@ namespace bitmap {
 	{};
 	template<typename Pixel>
 	BitMap<Pixel>::BitMap(const BitMap& bitmap) :
-		BitMap{ bitmap.get(), bitmap.size }
+		BitMap{ bitmap.size, bitmap.ptr.get() }
 	{}
 	template<typename Pixel>
-	BitMap<Pixel>::BitMap(const Pixel* data, const glm::ivec2 size, bool mirror) :
-		std::unique_ptr<Pixel[]>{ Data(data,size,mirror) },
+	BitMap<Pixel>::BitMap(const glm::ivec2 size, const Pixel pixel) :
+		ptr{ size.x * size.y ? new Pixel[size.x * size.y]{ pixel } : nullptr },
 		size{ size }
 	{}
 	template<typename Pixel>
-	void BitMap<Pixel>::operator= (const BitMap& other) {
-		static_cast<std::unique_ptr<Pixel[]>&>(*this) = Data(other.get(), other.size);
-		size = other.size;
+	BitMap<Pixel>::BitMap(const glm::ivec2 size, const Pixel* data) :
+		ptr{ size.x * size.y ? new Pixel[size.x * size.y]{} : nullptr },
+		size{ size }
+	{
+		if (ptr && data)
+			std::memcpy(ptr.get(), data, size.x * size.y * sizeof(Pixel));
 	}
 	template<typename Pixel>
-	BitMap<Pixel>& BitMap<Pixel>::SetSize(const glm::ivec2 new_size) {
-		static_cast<std::unique_ptr<Pixel[]>&>(*this) = Data(nullptr, new_size);
-		size = new_size;
+	BitMap<Pixel>& BitMap<Pixel>::operator= (BitMap&& other) {
+		ptr = std::unique_ptr<Pixel[]>{ other.ptr.release() };
+		size = other.size;
+		other.size = {0,0};
 		return *this;
 	}
 	template<typename Pixel>
+	BitMap<Pixel>& BitMap<Pixel>::operator= (const BitMap& other) {
+		return *this = BitMap<Pixel>{ other.size, other.ptr.get() };
+	}
+	template<typename Pixel>
+	BitMap<Pixel>& BitMap<Pixel>::operator+ (const BitMap& other) {
+		const int height{ other.size.y > size.y ? other.size.y : size.y };
+		const int width{ other.size.x + size.x };
+		BitMap<Pixel> temp{ { width, height } };
+		temp.Insert(*this, { 0, (height - size.y + 1) >> 1 });
+		temp.Insert(other, { size.x, (height - other.size.y + 1) >> 1 });
+		return *this = std::move(temp);
+	}
+	template<typename Pixel>
+	BitMap<Pixel>& BitMap<Pixel>::SetSize(const glm::ivec2 new_size, const glm::ivec2 pos, const Pixel pixel) {
+		const glm::ivec2 offset{ (new_size.x - size.x + 1) >> 1, (new_size.y - size.y + 1) >> 1 };
+		return *this = BitMap<Pixel>{ new_size, pixel }.Insert(*this, offset);
+	}
+	template<typename Pixel>
 	BitMap<Pixel>& BitMap<Pixel>::SetPixel(const glm::ivec2 pos, const Pixel pixel) {
-		if (0 <= pos.x || pos.x < size.x || 0 <= pos.y || pos.y < size.y) {
-			this->get()[pos.x + pos.y * size.x] = pixel;
+		if (0 <= pos.x && pos.x < size.x && 0 <= pos.y && pos.y < size.y) {
+			ptr.get()[pos.x + pos.y * size.x] = pixel;
 		}
 		return *this;
 	}
@@ -124,7 +125,7 @@ namespace bitmap {
 	BitMap<Pixel>& BitMap<Pixel>::Insert(const BitMap& other, const glm::ivec2 pos) {
 		for (unsigned y = 0; y < other.GetSize().y; ++y) {
 			for (unsigned x = 0; x < other.GetSize().x; ++x) {
-				this->SetPixel({ pos.x + x,pos.y + y }, other.GetPixel({ x,y }));
+				SetPixel({ pos.x + x, pos.y + y }, other.GetPixel({ x,y }));
 			}
 		}
 		return *this;
@@ -143,23 +144,9 @@ namespace bitmap {
 		auto halfY{ size.y >> 1 };
 		for (unsigned d = 0, s = size.y - 1; d < halfY; ++d, --s) {
 			for (unsigned x = 0; x < size.x; ++x) {
-				Pixel temp = this->get()[x + d * size.x];
-				this->get()[x + d * size.x] = this->get()[x + s * size.x];
-				this->get()[x + s * size.x] = temp;
-			}
-		}
-		return *this;
-	}
-	template<typename Pixel>
-	BitMap<Pixel>& BitMap<Pixel>::Border(const Pixel pixel) {
-		for (auto y : { 0,size.y - 1 }) {
-			for (auto x = 0; x < size.x; ++x) {
-				this->get()[x + y * size.x] = pixel;
-			}
-		}
-		for (auto x : { 0,size.x - 1 }) {
-			for (auto y = 0; y < size.y; ++y) {
-				this->get()[x + y * size.x] = pixel;
+				Pixel temp = ptr.get()[x + d * size.x];
+				ptr.get()[x + d * size.x] = ptr.get()[x + s * size.x];
+				ptr.get()[x + s * size.x] = temp;
 			}
 		}
 		return *this;
@@ -179,9 +166,18 @@ namespace bitmap {
 	}
 	template<typename Pixel>
 	Pixel BitMap<Pixel>::GetPixel(const glm::ivec2 pos) const {
-		if (0 <= pos.x || pos.x < size.x || 0 <= pos.y || pos.y < size.y)
-			return this->get()[pos.x + pos.y * size.x];
+		if (0 <= pos.x && pos.x < size.x && 0 <= pos.y && pos.y < size.y)
+			return ptr.get()[pos.x + pos.y * size.x];
 		else
 			return Pixel{};
+	}
+	template<typename Pixel>
+	glm::ivec2 MaxSize(const std::vector<BitMap<Red>>& vector) {
+		glm::ivec2 max{ 0,0 };
+		for (auto& elem : vector) {
+			auto size{ elem.GetSize() };
+			max.x = max.x > size.x ? max.x : size.x;
+			max.y = max.y > size.y ? max.y : size.y;
+		}
 	}
 }

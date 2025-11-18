@@ -2,22 +2,64 @@
 
 namespace frame {
 	Frame::Frame() :
-		monitor{ std::invoke([]() {
+		Frame{ std::invoke([]() {
 			glfwInit();
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 			return glfwGetPrimaryMonitor();
-			})},
-		size{ GetSize() },
-		window{ GetWindow() }
+			}) }
+	{}
+	Frame::Frame(GLFWmonitor* monitor) :
+		Frame{ monitor, std::invoke([&]() {
+			int count;
+			auto mode{ glfwGetVideoModes(monitor, &count) };
+			return Modes_t{ mode, count };
+			}) }
+	{}
+	Frame::Frame(GLFWmonitor* const monitor, const Modes_t modes) :
+		Frame{ modes, std::invoke([&]() {
+			int X,Y;
+			glfwGetMonitorPhysicalSize(monitor, &X, &Y);
+			return glm::ivec2{ X,Y };
+			}) }
+	{}
+	Frame::Frame(const Modes_t modes, const glm::ivec2 physical) :
+		Frame{ modes, physical, std::invoke([&]() {
+			glm::vec2 dpi;
+			auto& mode{ modes.ptr[modes.count - 1] };
+			constexpr int mm_in_inch = 254;
+			dpi.x = mode.width * mm_in_inch / (physical.x * 10);
+			dpi.y = mode.height * mm_in_inch / (physical.y * 10);
+			return dpi;
+			})
+		}
+	{};
+	Frame::Frame(const Modes_t modes_, const glm::ivec2 physical_, const glm::vec2 dpi_) :
+		modes{ modes_ },
+		size{ ReSize(physical_) },
+		dpi{ dpi_ },
+		window{ glfwCreateWindow(size.integer.x, size.integer.y, "The Rose and the Worm", NULL, NULL) },
+		uniform{ std::invoke([&]() {
+			glfwMakeContextCurrent(window);
+			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
+			constexpr unsigned index = 0;
+			unsigned block = 0;
+			glGenBuffers(1, &block);
+			glBindBuffer(GL_UNIFORM_BUFFER, block);
+			glBufferData(GL_UNIFORM_BUFFER, sizeof(Size_t), &size, GL_STATIC_DRAW);
+			glBindBufferBase(GL_UNIFORM_BUFFER, index, block);
+			glBindBuffer(GL_UNIFORM_BUFFER, 0);
+			return block;
+			})}
 	{
-		glfwMakeContextCurrent(window);
+		glfwSetWindowSize(window, size.integer.x, size.integer.y);
+
 		glfwSetWindowUserPointer(window, this);
 		glfwSetCursorPosCallback(window, CursorPosCallBack);
 		glfwSetMouseButtonCallback(window, MouseCallBack);
 
-		gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 		glClearColor(0., 0., 0., 1.0f);
 		glfwSwapBuffers(window);
 	}
@@ -41,40 +83,14 @@ namespace frame {
 		(*frame.*frame->call_paint)();
 		glfwSwapBuffers(window);
 	} 
-	Frame::Size_t Frame::GetSize() {
+	Frame::Size_t Frame::ReSize(const glm::ivec2 physical) {
 		Size_t size;
-		auto mode{ glfwGetVideoMode(monitor) };
-		glfwGetMonitorPhysicalSize(monitor, &size.physical.x, &size.physical.y);
-		if (setting::Setting::stt.FullScreen()) {
-			size.integer.x = mode->width;
-			size.integer.y = mode->height;
-		}
-		else {
-			size.integer = setting::Setting::stt.Size();
-			size.physical.x = size.physical.x * size.integer.x / mode->width;
-			size.physical.y = size.physical.y * size.integer.y / mode->height;
-		}
-		size.floating = size.integer;
+		GLFWvidmode mode{ modes.Get() };
+		if (setting::Setting::stt.FullScreen())
+			mode = modes.Back();
+		size.floating = size.integer = { mode.width, mode.height };
 		size.center = { size.integer.x >> 1, size.integer.y >> 1 };
 		size.pixel = { 1. / size.integer.x, 1. / size.integer.y };
-		constexpr int mm_in_inch = 254;
-		size.dpi.x = size.integer.x * mm_in_inch / (size.physical.x * 10);
-		size.dpi.y = size.integer.y * mm_in_inch / (size.physical.y * 10);
 		return size;
-	}
-	GLFWwindow* Frame::GetWindow() {
-		GLFWwindow* window;
-			if (setting::Setting::stt.FullScreen()) {
-				window = glfwCreateWindow(size.integer.x, size.integer.y, "The Rose and the Worm", NULL, NULL);
-				glfwSetWindowMonitor(window, monitor, 0, 0, size.integer.x, size.integer.y, GLFW_DONT_CARE);
-			}
-			else
-				window = glfwCreateWindow(size.integer.x, size.integer.y, "TEST", NULL, NULL);
-			return window;
-	}
-	void Frame::FullScreen() {
-		glfwSetWindowMonitor(window, monitor, 0, 0, size.integer.x, size.integer.y, GLFW_DONT_CARE);
-
-		//glfwSetWindowSize(window, size.integer.x << 1, size.integer.y << 1);
 	}
 }
