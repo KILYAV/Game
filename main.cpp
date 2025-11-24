@@ -1,13 +1,12 @@
 ﻿#define LEON_OPENGL_IMPLEMENTATION
-#include "setting.h"
-#include "frame.h"
 #include "font.h"
+#include "frame.h"
+#include "setting.h"
 
-#include "menu.h"
-//#include "window.h"
+#include "window.h"
 //#include "message.h"
 
 int main()
 {
-	menu::Main();
+	window::menu::Main();
 }

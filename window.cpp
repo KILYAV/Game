@@ -3,7 +3,7 @@
 namespace window::button {
 	void Button::CallBack(
 		const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse) {
-		if (Rectangle::SetFocus(Rectangle::Border(pos))) {
+		if (SetFocus(Border(pos))) {
 			if (mouse) {
 				auto tuple{ mouse.value() };
 				int button{ std::get<0>(tuple) };
@@ -20,20 +20,43 @@ namespace window::button {
 		return { size.x + size.y, size.y * 1.5 };
 	}
 	void Button::ReSize(const glm::ivec2 pos, const glm::ivec2 size) {
-		Rectangle::Array::SetCenter(pos);
-		Rectangle::Texture::SetCenter();
+		auto native{ Rectangle::Texture::GetSize() };
+		Rectangle::SetCenter(pos);
 		Rectangle::SetSize(std::invoke([&]() {
-			auto native{ Rectangle::Texture::GetSize() };
 			return glm::ivec2{ size.x - native.y * .5, native.y * 1.25 };
 			}));
-		Rectangle::LoadVertex(Rectangle::GetBorder(), Rectangle::Texture::GetTexture());
+		Rectangle::LoadVertex(Rectangle::GetBorder(), {0,0,native.x,native.y});
+	}
+	void Scroll::operator= (const std::vector<graphic::texture::Texture>& vector) {
+		textures = vector;
+	}
+	void Scroll::SetTexture() {
+		if (textures.size()) {
+			index = 0;
+			Button::SetTexture(textures[index]);
+		}
+	}
+	void Scroll::UpTexture() {
+		if (textures.size()) {
+			index = (index + 1) == textures.size() ? 0 : index + 1;
+			Button::SetTexture(textures[index]);
+		}
 	}
 }
 namespace window::menu {
 	void Menu::Paint() {
-		rectangle.Paint();
+		Rectangle::Paint();
 		for (auto& object : objects) {
 			object->Paint();
+		}
+	}
+	void Menu::SetSize(const glm::ivec2 size) {
+		Rectangle::SetCenter({ 0,0 });
+		Rectangle::SetSize(layout.GetSize(size, objects.size()));
+		LoadVertex(GetBorder());
+
+		for (int index = 0, count = objects.size(); index < count; ++index) {
+			objects[index]->ReSize(layout.GetPos(GetCenter(), size, count, index), size);
 		}
 	}
 	glm::ivec2 Menu::DefaultSize() const {
@@ -45,20 +68,17 @@ namespace window::menu {
 		}
 		return size;
 	}
-	void Menu::ReSize() {
-		glm::ivec2 size{ DefaultSize() };
-
-		rectangle.Array::SetCenter({ 0,0 });
-		rectangle.SetSize(layout.GetSize(size, objects.size()));
-		rectangle.LoadVertex(rectangle.GetBorder());
-
-		for (int index = 0, count = objects.size(); index < count; ++index) {
-			objects[index]->ReSize(layout.GetPos(rectangle.GetCenter(), size, count, index), size);
-		}
-	}
 	void Menu::CallBack(const glm::ivec2 pos, std::optional<std::tuple<int, int, int>> mouse) {
 		for (auto& object : objects) {
 			object->CallBack(pos, mouse);
 		}
+	}
+	Window* Menu::operator[] (const wchar_t* label) {
+		Window* result = nullptr;
+		for (auto& object : objects) {
+			if (label == object->Label())
+				result = object.get();
+		}
+		return result;
 	}
 }

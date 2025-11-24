@@ -8,10 +8,10 @@ layout (location = 0) in vec4 in_border;
 layout (location = 1) in vec2 in_texture;
 
 layout(std140, binding = 0) uniform frame {
-	vec2 size;
-	vec2 pixel;
-	ivec2 integer;
-	ivec2 center;
+	vec4 floating;
+	vec4 pixel;
+	ivec4 integer;
+	ivec4 center;
 };
 
 uniform int rectangle_status;

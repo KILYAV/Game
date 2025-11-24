@@ -9,10 +9,10 @@ layout (location = 0) out vec4 out_border;
 layout (location = 1) out vec2 out_texture;
 
 layout(std140, binding = 0) uniform frame {
-	vec2 size;
-	vec2 pixel;
-	ivec2 integer;
-	ivec2 center;
+	vec4 floating;
+	vec4 pixel;
+	ivec4 integer;
+	ivec4 center;
 };
 
 void main()

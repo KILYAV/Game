@@ -7,8 +7,6 @@
 #include "font.h"
 #include "bitmap.h"
 
-auto& frm = frame::Frame::frm;
-
 namespace graphic::shader {
 	unsigned CompileShader(const char* str, const int glsl, const int GL_XXXX_SHADER) {
 		auto resource{ FindResourceA(NULL, MAKEINTRESOURCEA(glsl), str) };
@@ -67,7 +65,7 @@ namespace graphic::shader {
 		return shader;
 	}
 }
-namespace graphic::shape {
+namespace graphic {
 	bool Rectangle::Border(const glm::ivec2 pos) const {
 		return pos.x >= rectangle.z && pos.x < rectangle.x && pos.y >= rectangle.w && pos.y < rectangle.y;
 	}
@@ -99,17 +97,16 @@ namespace graphic::shape {
 		rectangle = { R, U, L, D };
 		return rectangle;
 	}
-	/*
-	glm::vec4 Rectangle::GetTextures(const texture::Texture::Data& texture) const {
-		int R = center.x + texture.center.x + ((texture.size.x + 1) >> 1);
-		int U = center.y + texture.center.y + ((texture.size.y + 1) >> 1);
-		int L = R - texture.size.x;
-		int D = U - texture.size.y;
-		std::cout << texture.center.x << " " << texture.center.y << " " << texture.size.x << " " << texture.size.y << "\n";
-		std::cout << R << " " << U << " " << L << " " << D << "\n";
-		return { R, U, L, D };
+	void Rectangle::Paint() const {
+		Shader::Bind();
+		Vertex::Bind();
+		Texture::Bind(GL_TEXTURE0);
+
+		glDrawArrays(GL_POINTS, 0, count);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
 	}
-	*/
 }
 namespace graphic::layout {
 	glm::ivec2 Layout::GetSize(const glm::ivec2 step, const int count) const {

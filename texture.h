@@ -8,38 +8,31 @@
 namespace graphic {
 	namespace texture {
 		struct Texture {
-			struct Data {
-				glm::ivec2 center;
-				glm::ivec2 size;
-				unsigned ID;
-				operator const glm::ivec4() const {
-					return *static_cast<const glm::ivec4*>(static_cast<const void*>(this));
-				}
-			};
 		private:
-			std::vector<Data> texture;
-			unsigned index;
+			glm::ivec2 size;
+			unsigned bit;
+			unsigned ID;
 		public:
 			static constexpr size_t count = 1;
 
-			unsigned size() const {
-				return texture.size();
-			}
-			Texture& AddTexture(const int ID);
-			Texture& AddTexture(const wchar_t* label);
-			Texture& AddTexture(const Texture& other);
-			bool Bind(const unsigned active = GL_TEXTURE0) const;
+			Texture() = default;
+			Texture(const Texture& texture) = default;
+			Texture(const glm::ivec2 size, const unsigned bit, const void* data);
+			template<class Pixel>
+			Texture(const bitmap::Bitmap<Pixel>& bitmap) :
+				Texture{ bitmap.GetSize(), sizeof(Pixel), bitmap.Data() }
+			{}
+			Texture(const int ID);
 
-			void SetCenter(const glm::ivec2 pos = { 0,0 });
-			glm::ivec2 GetSize() const;
-			const Data& GetTexture() const;
+			void Bind(const unsigned active) const {
+				glActiveTexture(active);
+				glBindTexture(GL_TEXTURE_2D, ID);
+			}
+			glm::ivec2 GetSize() const {
+				return size;
+			}
 		};
-		struct Scroll {
-		private:
-			std::vector<std::vector<bitmap::BitMap<bitmap::Red>>> scroll;
-		public:
-			Scroll& AddVector(std::vector<std::wstring>&& string);
-			Texture Release();
-		};
+		void Bind(const std::vector<Texture>& texture);
+		glm::ivec2 MaxSize(const std::vector<Texture>& texture);
 	}
 }
